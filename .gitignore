@@ -216,3 +216,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# React / Node / Electron
+node_modules/
+dist/
+.env.local
+npm-debug.log*
