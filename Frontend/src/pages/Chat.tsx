@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { sendMessageToJarvis } from '../services/jarvis'
 
 import {
   Terminal,
@@ -16,7 +17,7 @@ type ChatMessage = {
 function Chat() {
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!message.trim()) return
 
     const userMessage: ChatMessage = {
@@ -24,18 +25,36 @@ function Chat() {
       content: message,
     }
 
-    const jarvisMessage: ChatMessage = {
-      role: 'assistant',
-      content: `You said: ${message}`,
-    }
-
     setMessages([
       ...messages,
       userMessage,
-      jarvisMessage,
     ])
 
     setMessage('')
+
+    try {
+      const result = await sendMessageToJarvis(message)
+
+      const jarvisMessage: ChatMessage = {
+        role: 'assistant',
+        content: result.response,
+      }
+
+      setMessages((currentMessages) => [
+        ...currentMessages,
+        jarvisMessage,
+      ])
+    } catch (error) {
+      const errorMessage: ChatMessage = {
+        role: 'assistant',
+        content: 'Unable to connect to Jarvis.',
+      }
+
+      setMessages((currentMessages) => [
+        ...currentMessages,
+        errorMessage,
+      ])
+    }
   }
   return (
     <>
