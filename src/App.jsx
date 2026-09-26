@@ -1,7 +1,7 @@
-import Tools from "./pages/Tools/Tools";
+import Automation from "./pages/Automation/Automation";
 
 function App() {
-  return <Tools />;
+  return <Automation />;
 }
 
 export default App;
