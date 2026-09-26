@@ -26,13 +26,13 @@ The required segments include:
 
 **Proposed Flow Diagram**
 
-![Proposed Flow Diagram](./updated_flow_diagram.png)
+![Proposed Flow Diagram](../images/updated_flow_diagram.png)
 
 **Proposed User Experience**
 
-![Proposed User Experience](./Jarvis_user_experience.png)
+![Proposed User Experience](../images/Jarvis_user_experience.png)
 
 **Proposed front End**
 
-![Proposed front End](./Jarvis_proposed_frontend.png)
+![Proposed front End](../images/Jarvis_proposed_frontend.png)
 
