@@ -222,3 +222,6 @@ node_modules/
 dist/
 .env.local
 npm-debug.log*
+
+# Electron Forge build output
+out/
