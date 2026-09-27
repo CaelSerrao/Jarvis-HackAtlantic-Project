@@ -1,0 +1,43 @@
+{
+  "name": "create_zip_archive_tool",
+  "description": "Creates a ZIP archive from a source directory with optional exclusion patterns.",
+  "function_name": "create_zip_archive",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "source_path": {
+        "type": "string",
+        "description": "Path to the source directory to archive.",
+        "minLength": 1
+      },
+      "destination_path": {
+        "type": "string",
+        "description": "Path to the output ZIP file.",
+        "minLength": 1
+      },
+      "exclude_patterns": {
+        "type": "array",
+        "description": "List of glob patterns to exclude from the archive.",
+        "items": {
+          "type": "string"
+        },
+        "default": []
+      },
+      "compression": {
+        "type": "string",
+        "description": "Compression method for the archive.",
+        "enum": ["deflated", "stored"],
+        "default": "deflated"
+      }
+    },
+    "required": ["source_path", "destination_path"],
+    "additionalProperties": false
+  },
+  "permissions": [
+    "read_directory",
+    "write_file"
+  ],
+  "supported_platforms": ["windows", "macos"],
+  "risk_level": "medium",
+  "path_parameters": ["source_path", "destination_path"]
+}

@@ -1,0 +1,47 @@
+{
+  "candidate": "C:\\Users\\Cael Serrao\\Projects\\Jarvis-HackAtlantic-Project\\Backend\\Jarvis_Max\\generated_tools\\pending\\capability_29",
+  "success": true,
+  "checks": {
+    "required_files": {
+      "success": true,
+      "details": "All required files exist."
+    },
+    "manifest_json": {
+      "success": true,
+      "details": "manifest.json contains valid JSON."
+    },
+    "manifest_schema": {
+      "success": true,
+      "details": "Manifest structure is valid."
+    },
+    "syntax_tool.py": {
+      "success": true,
+      "details": "Valid Python syntax."
+    },
+    "syntax_test_tool.py": {
+      "success": true,
+      "details": "Valid Python syntax."
+    },
+    "security_tool.py": {
+      "success": true,
+      "details": "No blocked constructs detected."
+    },
+    "security_test_tool.py": {
+      "success": true,
+      "details": "No blocked constructs detected."
+    },
+    "function_exists": {
+      "success": true,
+      "details": "Function 'create_zip_archive' exists."
+    },
+    "tests": {
+      "success": true,
+      "details": {
+        "return_code": 0,
+        "stdout": "",
+        "stderr": "......\n----------------------------------------------------------------------\nRan 6 tests in 0.060s\n\nOK"
+      }
+    }
+  },
+  "errors": []
+}

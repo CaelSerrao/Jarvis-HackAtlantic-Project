@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+pydantic
+requests
+openai
+mistralai
+faster-whisper==1.2.1
+numpy==2.4.6
+sounddevice==0.5.6
+pyttsx3==2.99

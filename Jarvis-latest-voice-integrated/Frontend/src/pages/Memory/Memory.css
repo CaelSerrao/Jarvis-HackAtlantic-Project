@@ -1,0 +1,603 @@
+/* Self-contained and page-scoped: safe alongside Settings.css. */
+
+.memory-page {
+  --text: #edf6ff;
+  --muted: #9aafc4;
+  --border: rgba(120, 177, 225, 0.17);
+  --cyan: #46e9ff;
+  color-scheme: dark;
+  min-height: 100vh;
+  color: var(--text);
+  background:
+    radial-gradient(
+      ellipse at 90% 0%,
+      rgba(22, 94, 160, 0.2),
+      transparent 48%
+    ),
+    radial-gradient(
+      ellipse at 15% 90%,
+      rgba(0, 198, 255, 0.055),
+      transparent 40%
+    ),
+    #050b13;
+  font:
+    14px/1.6 Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+}
+
+.memory-page *,
+.memory-page *::before,
+.memory-page *::after {
+  box-sizing: border-box;
+}
+
+.memory-page .j-container {
+  max-width: 1160px;
+  margin: auto;
+  padding: 48px 32px 72px;
+}
+
+.memory-page h1,
+.memory-page h2,
+.memory-page h3,
+.memory-page p {
+  margin: 0;
+}
+
+.memory-page h1 {
+  font-size: clamp(28px, 4vw, 36px);
+  font-weight: 600;
+  letter-spacing: -1.2px;
+  line-height: 1.3;
+  margin: 6px 0 10px;
+}
+
+.memory-page h2 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+
+.memory-page h3 {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.memory-page p {
+  color: var(--muted);
+}
+
+.memory-page .j-eyebrow {
+  color: #62bbff;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2.2px;
+}
+
+.memory-page .j-header,
+.memory-page .j-heading,
+.memory-page .j-row-top,
+.memory-page .j-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.memory-page .j-header {
+  margin-bottom: 24px;
+}
+
+.memory-page button,
+.memory-page input,
+.memory-page select,
+.memory-page textarea {
+  font: inherit;
+}
+
+.memory-page button {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: rgba(25, 48, 70, 0.6);
+  color: var(--text);
+  padding: 9px 14px;
+  cursor: pointer;
+  transition:
+    background 0.18s,
+    border-color 0.18s;
+}
+
+.memory-page button:hover:not(:disabled) {
+  border-color: #4285b6;
+  background: #173650;
+}
+
+.memory-page button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.memory-page :is(button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 4px;
+}
+
+.memory-page .j-primary {
+  background: linear-gradient(135deg, #2379ef, #405fea);
+  border-color: #4a87f9;
+  box-shadow: 0 6px 24px #1767e524;
+  font-weight: 600;
+}
+
+.memory-page .j-danger {
+  color: #ff9b9b;
+}
+
+.memory-page .j-demo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 26px;
+}
+
+.memory-page .j-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--border);
+  background: #ffffff05;
+  border-radius: 30px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: #a9bfd2;
+  white-space: nowrap;
+}
+
+.memory-page .j-active {
+  color: #6fe8b2;
+  border-color: #38e58c30;
+  background: #38e58c0c;
+}
+
+.memory-page .j-active::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  background: currentColor;
+  border-radius: 50%;
+}
+
+.memory-page .j-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 32px;
+}
+
+.memory-page .j-stat,
+.memory-page .j-card,
+.memory-page .j-panel {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: linear-gradient(
+    145deg,
+    rgba(20, 39, 58, 0.7),
+    rgba(7, 16, 27, 0.7)
+  );
+  box-shadow:
+    0 16px 40px #00000014,
+    inset 0 1px #ffffff04;
+  backdrop-filter: blur(18px);
+}
+
+.memory-page .j-stat {
+  padding: 20px 22px;
+}
+
+.memory-page .j-stat span {
+  color: var(--muted);
+  font-size: 12px;
+  display: block;
+}
+
+.memory-page .j-stat strong {
+  display: block;
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -1px;
+  margin-top: 5px;
+}
+
+.memory-page .j-heading {
+  margin: 26px 0 16px;
+}
+
+.memory-page .j-heading p,
+.memory-page .j-heading > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.memory-page .j-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  margin: 18px 0;
+}
+
+.memory-page .j-search {
+  flex: 1 1 260px;
+}
+
+.memory-page input:not([type="checkbox"]),
+.memory-page select,
+.memory-page textarea {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #081522;
+  color: var(--text);
+  outline-offset: 3px;
+}
+
+.memory-page input::placeholder,
+.memory-page textarea::placeholder {
+  color: #8196aa;
+}
+
+.memory-page .j-tabs,
+.memory-page .j-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.memory-page .j-tabs button {
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.memory-page button[aria-pressed="true"] {
+  background: #42a5ff19;
+  color: #89d7ff;
+  border-color: #42a5ff66;
+}
+
+.memory-page .j-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.memory-page .j-card {
+  padding: 22px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-wrap: anywhere;
+}
+
+.memory-page .j-card:hover {
+  border-color: #459fff50;
+}
+
+.memory-page .j-card > p {
+  font-size: 13px;
+  flex: 1;
+}
+
+.memory-page .j-icon {
+  width: 42px;
+  height: 42px;
+  border: 1px solid #42a5ff33;
+  border-radius: 12px;
+  background: #42a5ff0d;
+  display: grid;
+  place-items: center;
+  color: #69d8ff;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+
+.memory-page .j-card-footer {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+.memory-page .j-meta {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.memory-page .j-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.memory-page .j-workflow {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: start;
+}
+
+.memory-page .j-workflow p {
+  margin: 6px 0 12px;
+  font-size: 13px;
+}
+
+.memory-page .j-workflow .j-row-top {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.memory-page .j-panel {
+  padding: 24px;
+  margin-top: 24px;
+}
+
+.memory-page .j-activity {
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.memory-page .j-activity:last-child {
+  border: 0;
+}
+
+.memory-page .j-empty {
+  padding: 48px 20px;
+  text-align: center;
+  grid-column: 1 / -1;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+}
+
+.memory-page .j-empty > span {
+  font-size: 32px;
+  color: var(--cyan);
+}
+
+.memory-page .j-empty p {
+  margin: 8px 0 18px;
+}
+
+.memory-page .j-notice {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  z-index: 5;
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: #14344a;
+  box-shadow: 0 10px 40px #0006;
+  color: #d7f5ff;
+}
+
+.memory-page .j-notice:empty {
+  display: none;
+}
+
+.memory-page .j-modal {
+  color: var(--text);
+  width: min(540px, calc(100% - 32px));
+  max-height: 85vh;
+  padding: 28px;
+  border: 1px solid #386180;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #112337, #07111e);
+  box-shadow: 0 30px 100px #0009;
+  overflow: auto;
+}
+
+.memory-page .j-modal::backdrop {
+  background: #020913bb;
+  backdrop-filter: blur(7px);
+}
+
+.memory-page .j-modal-head {
+  margin-bottom: 24px;
+}
+
+.memory-page .j-modal-head button {
+  font-size: 22px;
+  padding: 2px 12px;
+}
+
+.memory-page .j-form {
+  display: grid;
+  gap: 18px;
+}
+
+.memory-page .j-form label {
+  display: grid;
+  gap: 7px;
+  color: #c1d2e3;
+  font-size: 12px;
+}
+
+.memory-page textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.memory-page .j-form .j-actions {
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.memory-page .j-detail {
+  margin: 20px 0;
+  display: grid;
+  gap: 12px;
+}
+
+.memory-page .j-detail div {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.memory-page .j-detail dt {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.memory-page .j-detail dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.memory-page .j-result {
+  border: 1px solid #46e9ff30;
+  padding: 14px;
+  border-radius: 10px;
+  background: #46e9ff08;
+  margin-top: 18px;
+}
+
+.memory-page .j-file-list {
+  display: grid;
+  gap: 8px;
+}
+
+.memory-page .j-file-row {
+  width: 100%;
+  text-align: left;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) 1fr 80px 100px;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+}
+
+.memory-page .j-file-name {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.memory-page .j-file-name strong {
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+
+.memory-page .j-file-row > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.memory-page .j-file-row .j-icon {
+  font-size: 11px;
+}
+
+.memory-page .j-grid .j-file-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 22px;
+}
+
+.memory-page .j-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 900px) {
+  .memory-page .j-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .memory-page .j-workflow {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .memory-page .j-workflow > .j-actions {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 600px) {
+  .memory-page .j-container {
+    padding: 28px 18px 64px;
+  }
+
+  .memory-page .j-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .memory-page .j-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .memory-page .j-stat {
+    padding: 16px;
+  }
+
+  .memory-page .j-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .memory-page .j-file-row {
+    grid-template-columns: minmax(0, 1fr) 70px;
+  }
+
+  .memory-page .j-file-row > span:nth-last-child(1),
+  .memory-page .j-file-row > span:nth-last-child(3) {
+    display: none;
+  }
+
+  .memory-page .j-modal {
+    padding: 20px;
+  }
+
+  .memory-page .j-tabs {
+    gap: 5px;
+  }
+
+  .memory-page .j-tabs button {
+    padding: 8px 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .memory-page * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

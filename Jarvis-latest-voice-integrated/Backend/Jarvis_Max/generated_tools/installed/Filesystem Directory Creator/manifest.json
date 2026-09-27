@@ -1,0 +1,59 @@
+{
+  "name": "create_directories",
+  "description": "Create one or more folders or directories. When the user specifies a known location such as Desktop, Downloads, or Documents, pass that location using parent_path.",
+
+  "function_name": "create_directories",
+
+  "parameters": {
+    "type": "object",
+
+    "properties": {
+      "directory_paths": {
+        "description": "The folder name or folder names to create. Usually relative to parent_path. Example: 'Homework', not 'Desktop/Homework' when parent_path is 'desktop'.",
+
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+
+      "parent_path": {
+        "description": "Optional parent location. Use values such as 'desktop', 'downloads', 'documents', or an absolute filesystem path. For 'create Homework on my desktop', use parent_path='desktop'.",
+
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+
+    "required": [
+      "directory_paths"
+    ],
+
+    "additionalProperties": false
+  },
+
+  "path_parameters": [
+    "parent_path"
+  ],
+
+  "permissions": [
+    "create_directories",
+    "read_current_working_directory"
+  ],
+
+  "supported_platforms": [
+    "Windows",
+    "macOS"
+  ],
+
+  "risk_level": "low"
+}
