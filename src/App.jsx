@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import SignIn from "./pages/SignIn/SignIn";
 import Settings from "./pages/Settings/Settings";
@@ -6,33 +6,71 @@ import Automation from "./pages/Automation/Automation";
 import Memory from "./pages/Memory/Memory";
 import Tools from "./pages/Tools/Tools";
 import Files from "./pages/Files/Files";
+import Chat from "./pages/Chat/Chat";
+import { getCurrentUser, signIn, signOut, signUp } from "./services/auth";
 
-const pages = {
-  Settings,
-  Automation,
-  Memory,
-  Tools,
-  Files,
-};
+const pages = { Chat, Settings, Automation, Memory, Tools, Files };
 
 function App() {
-  const [demoOpen, setDemoOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const [isRestoringSession, setIsRestoringSession] = useState(true);
+  const [sessionError, setSessionError] = useState("");
+  const [signOutError, setSignOutError] = useState("");
   const [activePage, setActivePage] = useState("Settings");
 
   const ActivePage = pages[activePage];
 
-  function handleSignIn() {
+  useEffect(() => {
+    let isActive = true;
+
+    getCurrentUser()
+      .then((currentUser) => {
+        if (isActive) setUser(currentUser);
+      })
+      .catch((error) => {
+        if (isActive) setSessionError(error.message);
+      })
+      .finally(() => {
+        if (isActive) setIsRestoringSession(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  async function handleSignIn({ username, password, mode }) {
+    if (mode === "signup") {
+      await signUp(username, password);
+    }
+
+    const authenticatedUser = await signIn(username, password);
+    setUser(authenticatedUser);
     setActivePage("Settings");
-    setDemoOpen(true);
+    setSessionError("");
   }
 
-  function handleSignOut() {
-    setDemoOpen(false);
-    setActivePage("Settings");
+  async function handleSignOut() {
+    setSignOutError("");
+    try {
+      await signOut();
+      setUser(null);
+      setActivePage("Settings");
+    } catch (error) {
+      setSignOutError(error.message);
+    }
   }
 
-  if (!demoOpen) {
-    return <SignIn onSignIn={handleSignIn} />;
+  if (isRestoringSession) {
+    return (
+      <main className="signin-page" aria-live="polite">
+        <p className="signin-session-status">Restoring your Jarvis session…</p>
+      </main>
+    );
+  }
+
+  if (!user) {
+    return <SignIn onSubmit={handleSignIn} initialError={sessionError} />;
   }
 
   return (
@@ -57,9 +95,15 @@ function App() {
           className="jarvis-demo-signout"
           onClick={handleSignOut}
         >
-          Exit demo
+          Sign out
         </button>
       </nav>
+
+      {signOutError && (
+        <p className="signin-error signin-signout-error" role="alert">
+          {signOutError}
+        </p>
+      )}
 
       <ActivePage />
     </div>

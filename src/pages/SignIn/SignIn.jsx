@@ -1,31 +1,58 @@
 import React, { useId, useState } from "react";
 import "./SignIn.css";
 
-function SignIn({ onSignIn }) {
-  const emailId = useId();
+function SignIn({ onSubmit, initialError = "" }) {
+  const usernameId = useId();
   const passwordId = useId();
+  const confirmPasswordId = useId();
   const errorId = useId();
 
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [mode, setMode] = useState("login");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!email.trim() || !password.trim()) {
-      setError("Enter your email and password to continue.");
+    const normalizedUsername = username.trim().toLowerCase();
+    if (!/^[a-z0-9_]{3,32}$/.test(normalizedUsername)) {
+      setError("Use 3–32 characters: letters, numbers, or underscores.");
+      return;
+    }
+
+    if (password.length < 12 || password.length > 128) {
+      setError("Your password must be between 12 and 128 characters.");
+      return;
+    }
+
+    if (mode === "signup" && password !== confirmPassword) {
+      setError("The passwords do not match.");
       return;
     }
 
     setError("");
-
-    // Frontend preview only.
-    // Connect your authentication backend here later.
-    // The password is never saved or sent anywhere.
-    onSignIn();
+    setIsSubmitting(true);
+    try {
+      await onSubmit({ username: normalizedUsername, password, mode });
+    } catch (submitError) {
+      setError(submitError.message || "Authentication failed. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
+
+  function changeMode(nextMode) {
+    setMode(nextMode);
+    setError("");
+    setPassword("");
+    setConfirmPassword("");
+  }
+
+  const displayedError = error || initialError;
 
   return (
     <main className="signin-page">
@@ -91,7 +118,7 @@ function SignIn({ onSignIn }) {
           <div className="signin-card-top">
             <span className="signin-preview-badge">
               <span aria-hidden="true" />
-              FRONTEND PREVIEW
+              LOCAL ACCOUNT
             </span>
 
             <span className="signin-card-symbol" aria-hidden="true">
@@ -101,27 +128,31 @@ function SignIn({ onSignIn }) {
 
           <div className="signin-heading">
             <p className="signin-eyebrow">YOUR WORKSPACE AWAITS</p>
-            <h2 id="signin-title">Welcome back.</h2>
-            <p>A little focus starts here.</p>
+            <h2 id="signin-title">{mode === "login" ? "Welcome back." : "Create your account."}</h2>
+            <p>{mode === "login" ? "A little focus starts here." : "Choose your Jarvis account details."}</p>
           </div>
 
-          <form className="signin-form" onSubmit={handleSubmit}>
+          <form className="signin-form" onSubmit={handleSubmit} aria-busy={isSubmitting}>
             <div className="signin-field">
-              <label htmlFor={emailId}>Email address</label>
+              <label htmlFor={usernameId}>Username</label>
 
               <input
-                id={emailId}
-                name="email"
-                type="email"
-                value={email}
+                id={usernameId}
+                name="username"
+                type="text"
+                value={username}
                 onChange={(event) => {
-                  setEmail(event.target.value);
+                  setUsername(event.target.value);
                   setError("");
                 }}
-                placeholder="you@example.com"
-                autoComplete="email"
+                placeholder="your_username"
+                autoComplete="username"
                 autoCapitalize="none"
                 spellCheck={false}
+                minLength={3}
+                maxLength={32}
+                pattern="[A-Za-z0-9_]{3,32}"
+                disabled={isSubmitting}
                 required
               />
             </div>
@@ -139,9 +170,12 @@ function SignIn({ onSignIn }) {
                     setPassword(event.target.value);
                     setError("");
                   }}
-                  placeholder="Enter a demo password"
-                  autoComplete="off"
-                  aria-describedby={error ? errorId : undefined}
+                  placeholder="Enter your password"
+                  autoComplete={mode === "login" ? "current-password" : "new-password"}
+                  aria-describedby={displayedError ? errorId : undefined}
+                  minLength={12}
+                  maxLength={128}
+                  disabled={isSubmitting}
                   required
                 />
 
@@ -157,30 +191,52 @@ function SignIn({ onSignIn }) {
               </div>
             </div>
 
-            {error && (
+            {mode === "signup" && (
+              <div className="signin-field">
+                <label htmlFor={confirmPasswordId}>Confirm password</label>
+                <input
+                  id={confirmPasswordId}
+                  name="confirmPassword"
+                  type={showPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(event) => {
+                    setConfirmPassword(event.target.value);
+                    setError("");
+                  }}
+                  autoComplete="new-password"
+                  minLength={12}
+                  maxLength={128}
+                  disabled={isSubmitting}
+                  required
+                />
+              </div>
+            )}
+
+            {displayedError && (
               <p className="signin-error" id={errorId} role="alert">
-                {error}
+                {displayedError}
               </p>
             )}
 
-            <button type="submit" className="signin-submit">
-              <span>Sign in to demo</span>
+            <button type="submit" className="signin-submit" disabled={isSubmitting}>
+              <span>{isSubmitting ? "Please wait…" : mode === "login" ? "Sign in to Jarvis" : "Create account"}</span>
               <span aria-hidden="true">→</span>
             </button>
           </form>
 
           <div className="signin-divider">
             <span />
-            <p>or explore first</p>
+            <p>{mode === "login" ? "New to Jarvis?" : "Already have an account?"}</p>
             <span />
           </div>
 
           <button
             type="button"
             className="signin-demo-button"
-            onClick={() => onSignIn()}
+            onClick={() => changeMode(mode === "login" ? "signup" : "login")}
+            disabled={isSubmitting}
           >
-            Explore demo workspace
+            {mode === "login" ? "Create an account" : "Return to sign in"}
           </button>
 
           <div className="signin-preview-note">
@@ -189,8 +245,7 @@ function SignIn({ onSignIn }) {
             </span>
 
             <p>
-              This is a preview. Use sample details—credentials are not
-              verified, saved, or sent.
+              Jarvis verifies your account locally. Passwords are hashed by the backend and never stored in browser storage.
             </p>
           </div>
 

@@ -656,3 +656,24 @@
     transition: none !important;
   }
 }
+
+.signin-page .signin-submit:disabled,
+.signin-page .signin-demo-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.signin-page .signin-session-status {
+  color: var(--signin-muted);
+  text-align: center;
+}
+
+.signin-signout-error {
+  margin: 12px 20px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 122, 122, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 100, 100, 0.06);
+  color: #ffb0b0;
+  font-size: 12px;
+}
