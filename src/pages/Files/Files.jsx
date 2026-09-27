@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import "./Files.css";
 
 const sampleFiles = [
@@ -50,229 +50,436 @@ const sampleFiles = [
 ];
 
 function Files() {
-  const [files, setFiles] = useState(sampleFiles);
+  const [items, setItems] = useState(sampleFiles);
   const [search, setSearch] = useState("");
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [category, setCategory] = useState("All");
   const [view, setView] = useState("list");
+  const [selected, setSelected] = useState(null);
+  const [notice, setNotice] = useState("");
+  const [result, setResult] = useState("");
+  const input = useRef(null);
 
-  const filteredFiles = useMemo(() => {
-    return files.filter((file) =>
-      file.name.toLowerCase().includes(search.toLowerCase())
+  const match = (x, c) =>
+    c === "All" ||
+    (c === "Projects"
+      ? /Jarvis|Hackathon/i.test(x.location)
+      : c === "Documents"
+        ? ["PDF", "Text", "Document", "Presentation"].includes(x.type)
+        : c === "Images"
+          ? x.type === "Image"
+          : c === "Downloads"
+            ? x.location.includes("Downloads")
+            : x.location === "Imported files");
+
+  const filtered = items.filter(
+    (x) =>
+      (x.name + " " + x.location)
+        .toLowerCase()
+        .includes(search.toLowerCase()) &&
+      match(x, category)
+  );
+
+  function add(e) {
+    const picked = Array.from(e.target.files || []);
+
+    if (!picked.length) return;
+
+    const added = picked.map((f) => {
+      const ext = f.name.split(".").pop().toLowerCase();
+
+      const type =
+        {
+          pdf: "PDF",
+          txt: "Text",
+          md: "Text",
+          doc: "Document",
+          docx: "Document",
+          ppt: "Presentation",
+          pptx: "Presentation",
+          png: "Image",
+          jpg: "Image",
+          jpeg: "Image",
+          gif: "Image",
+          webp: "Image",
+        }[ext] || "File";
+
+      return {
+        id: crypto.randomUUID(),
+        name: f.name,
+        type,
+        size:
+          f.size < 1024
+            ? f.size + " B"
+            : f.size < 1048576
+              ? (f.size / 1024).toFixed(1) + " KB"
+              : (f.size / 1048576).toFixed(1) + " MB",
+        modified: "Just now",
+        location: "Imported files",
+        icon:
+          type === "Image"
+            ? "IMG"
+            : ext.slice(0, 4).toUpperCase(),
+      };
+    });
+
+    setItems((a) => [...added, ...a]);
+    setCategory("Imported");
+    setSearch("");
+    setNotice(
+      added.length +
+        " file entries added. Contents were not read or uploaded."
     );
-  }, [files, search]);
 
-  const handleMockUpload = (event) => {
-    const uploaded = Array.from(event.target.files);
-
-    const additions = uploaded.map((file) => ({
-      id: Date.now() + Math.random(),
-      name: file.name,
-      type: file.type || "File",
-      size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-      modified: "Just now",
-      location: "Imported Files",
-      icon: "NEW",
-    }));
-
-    setFiles((current) => [...additions, ...current]);
-  };
+    e.target.value = "";
+  }
 
   return (
-    <div className="files-page">
-      <main className="files-container">
-        <header className="files-header">
-          <div>
-            <p className="files-eyebrow">
-              JARVIS FILE INTELLIGENCE
-            </p>
-            <h1>Files</h1>
-            <p>
-              Find, inspect and work with files available to
-              Jarvis.
-            </p>
-          </div>
+    <Shell
+      title="Files"
+      subtitle="A clear view of the files that matter to you."
+      notice={notice}
+      action={
+        <>
+          <button
+            className="j-primary"
+            onClick={() => input.current.click()}
+          >
+            + Import files
+          </button>
 
-          <label className="file-import-button">
-            + Import File
-            <input
-              type="file"
-              multiple
-              hidden
-              onChange={handleMockUpload}
-            />
-          </label>
-        </header>
-
-        <section className="quick-access">
-          <QuickFolder
-            icon="▣"
-            name="Projects"
-            count="34 files"
+          <input
+            ref={input}
+            type="file"
+            multiple
+            hidden
+            onChange={add}
           />
-
-          <QuickFolder
-            icon="▤"
-            name="Documents"
-            count="128 files"
-          />
-
-          <QuickFolder
-            icon="↓"
-            name="Downloads"
-            count="16 files"
-          />
-
-          <QuickFolder
-            icon="◫"
-            name="Images"
-            count="47 files"
-          />
-        </section>
-
-        <section className="file-browser">
-          <div className="file-browser-top">
-            <div className="file-search">
-              <span>⌕</span>
-
-              <input
-                value={search}
-                onChange={(event) =>
-                  setSearch(event.target.value)
-                }
-                placeholder="Search files..."
-              />
-            </div>
-
-            <div className="view-controls">
-              <button
-                className={view === "list" ? "active" : ""}
-                onClick={() => setView("list")}
-              >
-                ☷
-              </button>
-
-              <button
-                className={view === "grid" ? "active" : ""}
-                onClick={() => setView("grid")}
-              >
-                ▦
-              </button>
-            </div>
-          </div>
-
-          <div
-            className={
-              view === "grid"
-                ? "file-grid"
-                : "file-list"
+        </>
+      }
+    >
+      <div className="j-stats">
+        {["Projects", "Documents", "Downloads", "Images"].map((c) => (
+          <button
+            className="j-stat"
+            key={c}
+            aria-pressed={category === c}
+            onClick={() =>
+              setCategory((v) => (v === c ? "All" : c))
             }
           >
-            {view === "list" && (
-              <div className="file-table-heading">
-                <span>Name</span>
-                <span>Type</span>
-                <span>Size</span>
-                <span>Modified</span>
+            <span>{c}</span>
+            <strong>{items.filter((x) => match(x, c)).length}</strong>
+            <span>file entries →</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="j-heading">
+        <div>
+          <h2>File library</h2>
+          <p>Browse sample files or add local file details.</p>
+        </div>
+
+        <div className="j-tabs" aria-label="View style">
+          {["list", "grid"].map((x) => (
+            <button
+              key={x}
+              aria-pressed={view === x}
+              onClick={() => setView(x)}
+            >
+              {x === "list" ? "List" : "Grid"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <Filters
+        {...{ search, setSearch, category, setCategory }}
+        options={[
+          "All",
+          "Projects",
+          "Documents",
+          "Downloads",
+          "Images",
+          "Imported",
+        ]}
+      />
+
+      <p className="j-meta">
+        {filtered.length} of {items.length} file entries · Select a file
+        to inspect
+      </p>
+
+      <div
+        className={view === "grid" ? "j-grid" : "j-file-list"}
+        style={{ marginTop: 16 }}
+      >
+        {filtered.map((x) => (
+          <button
+            className="j-file-row"
+            key={x.id}
+            onClick={() => {
+              setSelected(x);
+              setResult("");
+            }}
+          >
+            <div className="j-file-name">
+              <div className="j-icon" aria-hidden="true">
+                {x.icon}
               </div>
-            )}
 
-            {filteredFiles.map((file) => (
+              <strong>{x.name}</strong>
+            </div>
+
+            <span>{x.type}</span>
+            <span>{x.size}</span>
+            <span>{x.modified}</span>
+          </button>
+        ))}
+      </div>
+
+      {!filtered.length && (
+        <Empty
+          reset={() => {
+            setSearch("");
+            setCategory("All");
+          }}
+        />
+      )}
+
+      <section className="j-panel">
+        <h2>Your files stay with you</h2>
+        <p>
+          Imports add names, sizes, and types to this preview. File
+          contents stay unread, and nothing is uploaded.
+        </p>
+      </section>
+
+      {selected && (
+        <Modal
+          title={selected.name}
+          close={() => setSelected(null)}
+        >
+          <Badge>
+            {selected.type} · {selected.size}
+          </Badge>
+
+          <dl className="j-detail">
+            <div>
+              <dt>Location</dt>
+              <dd>{selected.location}</dd>
+            </div>
+
+            <div>
+              <dt>Added / modified</dt>
+              <dd>{selected.modified}</dd>
+            </div>
+
+            <div>
+              <dt>Availability</dt>
+              <dd>
+                {selected.location === "Imported files"
+                  ? "Metadata only · File contents not loaded"
+                  : "Sample entry · No file attached"}
+              </dd>
+            </div>
+          </dl>
+
+          <h3>Explore Jarvis actions</h3>
+          <p>Choose an action to preview its purpose.</p>
+
+          <div className="j-actions" style={{ marginTop: 16 }}>
+            {[
+              "Summarize",
+              "Ask about file",
+              "Find information",
+              "Open file",
+            ].map((action) => (
               <button
-                key={file.id}
-                className="file-row"
-                onClick={() => setSelectedFile(file)}
+                key={action}
+                onClick={() =>
+                  setResult(
+                    {
+                      Summarize:
+                        "A connected Jarvis would read the file and produce a summary.",
+                      "Ask about file":
+                        "A connected Jarvis would answer questions using this file as context.",
+                      "Find information":
+                        "A connected Jarvis would search within the file for relevant passages.",
+                      "Open file":
+                        "A connected Jarvis would open this file in its associated application.",
+                    }[action] +
+                      " This is a preview; no file was read or opened."
+                  )
+                }
               >
-                <div className="file-name">
-                  <div className="file-type-icon">
-                    {file.icon}
-                  </div>
-
-                  <strong>{file.name}</strong>
-                </div>
-
-                <span>{file.type}</span>
-                <span>{file.size}</span>
-                <span>{file.modified}</span>
+                {action}
               </button>
             ))}
           </div>
-        </section>
-      </main>
 
-      {selectedFile && (
-        <aside className="file-inspector">
-          <button
-            className="file-close"
-            onClick={() => setSelectedFile(null)}
-          >
-            ×
-          </button>
-
-          <p className="files-eyebrow">FILE DETAILS</p>
-
-          <div className="large-file-icon">
-            {selectedFile.icon}
+          <div role="status">
+            {result && <p className="j-result">{result}</p>}
           </div>
-
-          <h2>{selectedFile.name}</h2>
-          <p className="file-subtitle">
-            {selectedFile.type} • {selectedFile.size}
-          </p>
-
-          <FileInfo
-            label="Location"
-            value={selectedFile.location}
-          />
-
-          <FileInfo
-            label="Modified"
-            value={selectedFile.modified}
-          />
-
-          <div className="jarvis-file-actions">
-            <span>JARVIS ACTIONS</span>
-
-            <button>✦ Summarize</button>
-            <button>◈ Ask About File</button>
-            <button>⌕ Find Information</button>
-            <button>↗ Open File</button>
-          </div>
-
-          <div className="file-ai-note">
-            <span className="file-online-dot"></span>
-
-            <div>
-              <strong>Ready for Jarvis</strong>
-              <p>
-                Select an action to work with this file.
-              </p>
-            </div>
-          </div>
-        </aside>
+        </Modal>
       )}
+    </Shell>
+  );
+}
+
+// State is intentionally session-only. No network, filesystem or execution APIs.
+function Badge({ children, active = false }) {
+  return (
+    <span className={active ? "j-badge j-active" : "j-badge"}>
+      {children}
+    </span>
+  );
+}
+
+function Stats({ items }) {
+  return (
+    <section className="j-stats" aria-label="Overview">
+      {items.map(([value, label]) => (
+        <div className="j-stat" key={label}>
+          <span>{label}</span>
+          <strong>{value}</strong>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function Empty({ reset }) {
+  return (
+    <div className="j-empty">
+      <span aria-hidden="true">⌕</span>
+      <h3>Nothing here yet</h3>
+      <p>Try another search or add something new.</p>
+
+      <button onClick={reset}>Clear filters</button>
     </div>
   );
 }
 
-function QuickFolder({ icon, name, count }) {
+function Filters({
+  search,
+  setSearch,
+  options,
+  category,
+  setCategory,
+}) {
   return (
-    <button className="quick-folder">
-      <span>{icon}</span>
+    <div className="j-controls">
+      <label className="j-search">
+        <span className="j-sr">Search library</span>
 
-      <div>
-        <strong>{name}</strong>
-        <p>{count}</p>
+        <input
+          type="search"
+          placeholder="Search by name or description…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </label>
+
+      <div className="j-tabs" aria-label="Filter library">
+        {options.map((item) => (
+          <button
+            key={item}
+            aria-pressed={category === item}
+            onClick={() => setCategory(item)}
+          >
+            {item}
+          </button>
+        ))}
       </div>
-    </button>
+    </div>
   );
 }
 
-function FileInfo({ label, value }) {
+function Modal({ title, close, children }) {
+  const ref = useRef(null);
+  const heading = useId();
+
+  useEffect(() => {
+    const previous = document.activeElement;
+    const dialog = ref.current;
+
+    dialog.showModal();
+
+    return () => {
+      dialog.close();
+      previous?.focus();
+    };
+  }, []);
+
   return (
-    <div className="file-info">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
+    <dialog
+      className="j-modal"
+      ref={ref}
+      aria-labelledby={heading}
+      onCancel={(e) => {
+        e.preventDefault();
+        close();
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          const r = e.currentTarget.getBoundingClientRect();
+
+          if (
+            e.clientX < r.left ||
+            e.clientX > r.right ||
+            e.clientY < r.top ||
+            e.clientY > r.bottom
+          ) {
+            close();
+          }
+        }
+      }}
+    >
+      <header className="j-modal-head">
+        <div>
+          <p className="j-eyebrow">JARVIS / PREVIEW</p>
+          <h2 id={heading}>{title}</h2>
+        </div>
+
+        <button aria-label="Close dialog" onClick={close}>
+          ×
+        </button>
+      </header>
+
+      {children}
+    </dialog>
+  );
+}
+
+function Shell({ title, subtitle, action, notice, children }) {
+  return (
+    <main className="files-page j-page">
+      <div className="j-container">
+        <header className="j-header">
+          <div>
+            <p className="j-eyebrow">JARVIS / WORKSPACE</p>
+            <h1>{title}</h1>
+            <p>{subtitle}</p>
+          </div>
+
+          {action}
+        </header>
+
+        <div className="j-demo">
+          <Badge active>Demo workspace</Badge>
+          <span>
+            Sample data · Changes reset when you leave this page.
+          </span>
+        </div>
+
+        {children}
+
+        <div className="j-notice" role="status" aria-live="polite">
+          {notice}
+        </div>
+      </div>
+    </main>
   );
 }
 

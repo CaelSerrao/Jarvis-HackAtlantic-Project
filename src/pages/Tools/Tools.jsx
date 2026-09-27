@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import "./Tools.css";
 
 const initialTools = [
@@ -71,439 +71,462 @@ const initialTools = [
 ];
 
 function Tools() {
-  const [tools, setTools] = useState(initialTools);
+  const [items, setItems] = useState(initialTools);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
-  const [selectedTool, setSelectedTool] = useState(null);
-  const [showCreate, setShowCreate] = useState(false);
+  const [selected, setSelected] = useState(null);
+  const [create, setCreate] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [result, setResult] = useState("");
+  const [previews, setPreviews] = useState(0);
 
-  const [newTool, setNewTool] = useState({
-    name: "",
-    description: "",
-    category: "System",
-  });
+  const tool = items.find((x) => x.id === selected);
 
-  const filteredTools = useMemo(() => {
-    return tools.filter((tool) => {
-      const matchesSearch =
-        tool.name.toLowerCase().includes(search.toLowerCase()) ||
-        tool.description.toLowerCase().includes(search.toLowerCase());
+  const inspect = (x) => {
+    setSelected(x.id);
+    setResult("");
+  };
 
-      const matchesCategory =
-        category === "All" ||
+  const filtered = items.filter(
+    (x) =>
+      (x.name + " " + x.description)
+        .toLowerCase()
+        .includes(search.toLowerCase()) &&
+      (category === "All" ||
         (category === "Generated"
-          ? tool.generated
-          : tool.category === category);
+          ? x.generated
+          : x.category === category))
+  );
 
-      return matchesSearch && matchesCategory;
-    });
-  }, [tools, search, category]);
+  function submit(e) {
+    e.preventDefault();
 
-  const toggleTool = (id) => {
-    setTools((current) =>
-      current.map((tool) =>
-        tool.id === id
-          ? { ...tool, enabled: !tool.enabled }
-          : tool
-      )
-    );
-  };
+    const f = new FormData(e.currentTarget);
+    const name = f.get("name").trim();
 
-  const createTool = () => {
-    if (!newTool.name.trim()) return;
+    if (!name) return;
 
-    const tool = {
-      id: Date.now(),
-      name: newTool.name,
-      description:
-        newTool.description || "Custom Jarvis capability.",
-      category: newTool.category,
-      generated: true,
-      enabled: true,
-      verified: false,
-      runs: 0,
-      icon: "✦",
-    };
+    setItems((a) => [
+      {
+        id: crypto.randomUUID(),
+        name,
+        description:
+          f.get("description").trim() || "Custom Jarvis capability.",
+        category: f.get("category"),
+        generated: true,
+        enabled: false,
+        verified: false,
+        runs: 0,
+        icon: "✦",
+      },
+      ...a,
+    ]);
 
-    setTools((current) => [tool, ...current]);
-    setNewTool({
-      name: "",
-      description: "",
-      category: "System",
-    });
-    setShowCreate(false);
-  };
-
-  const readyCount = tools.filter((tool) => tool.enabled).length;
-  const generatedCount = tools.filter((tool) => tool.generated).length;
-  const verifiedCount = tools.filter((tool) => tool.verified).length;
-  const totalRuns = tools.reduce((sum, tool) => sum + tool.runs, 0);
+    setCreate(false);
+    setNotice("Tool draft created. No code was generated or executed.");
+  }
 
   return (
-    <div className="tools-page">
-      <div className="tools-glow glow-a"></div>
-      <div className="tools-glow glow-b"></div>
-
-      <main className="tools-container">
-        <header className="tools-header">
-          <div>
-            <p className="tools-eyebrow">JARVIS CAPABILITIES</p>
-            <h1>Tools</h1>
-            <p>
-              Manage the capabilities Jarvis can use to interact
-              with your system.
-            </p>
-          </div>
-
-          <button
-            className="tool-primary"
-            onClick={() => setShowCreate(true)}
-          >
-            + Create Tool
-          </button>
-        </header>
-
-        <section className="tool-stats">
-          <StatCard
-            value={readyCount}
-            label="Tools Ready"
-            status="green"
-          />
-
-          <StatCard
-            value={generatedCount}
-            label="Generated"
-            status="purple"
-          />
-
-          <StatCard
-            value={verifiedCount}
-            label="Verified"
-            status="blue"
-          />
-
-          <StatCard
-            value={totalRuns}
-            label="Total Runs"
-            status="cyan"
-          />
-        </section>
-
-        <section className="quick-tools">
-          <div className="section-heading">
-            <div>
-              <h2>Quick Tools</h2>
-              <p>Your most frequently used Jarvis capabilities.</p>
-            </div>
-          </div>
-
-          <div className="quick-grid">
-            {tools.slice(0, 4).map((tool) => (
-              <button
-                key={tool.id}
-                className="quick-tool"
-                onClick={() => setSelectedTool(tool)}
-              >
-                <span className="quick-icon">{tool.icon}</span>
-
-                <div>
-                  <strong>{tool.name}</strong>
-                  <span>
-                    {tool.enabled ? "Ready" : "Disabled"}
-                  </span>
-                </div>
-
-                <span
-                  className={`quick-status ${
-                    tool.enabled ? "online" : ""
-                  }`}
-                ></span>
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <section className="tool-library">
-          <div className="section-heading">
-            <div>
-              <h2>Tool Library</h2>
-              <p>
-                Search, inspect and manage available capabilities.
-              </p>
-            </div>
-          </div>
-
-          <div className="tool-controls">
-            <div className="tool-search">
-              <span>⌕</span>
-
-              <input
-                value={search}
-                onChange={(event) =>
-                  setSearch(event.target.value)
-                }
-                placeholder="Search tools..."
-              />
-            </div>
-
-            <div className="category-buttons">
-              {["All", "System", "Files", "Web", "Generated"].map(
-                (item) => (
-                  <button
-                    key={item}
-                    className={
-                      category === item ? "selected" : ""
-                    }
-                    onClick={() => setCategory(item)}
-                  >
-                    {item}
-                  </button>
-                )
-              )}
-            </div>
-          </div>
-
-          <div className="tools-grid">
-            {filteredTools.map((tool) => (
-              <article
-                className={`tool-card ${
-                  tool.generated ? "generated" : ""
-                }`}
-                key={tool.id}
-              >
-                <div className="tool-card-top">
-                  <div className="tool-icon">{tool.icon}</div>
-
-                  <div
-                    className={`tool-state ${
-                      tool.enabled ? "ready" : ""
-                    }`}
-                  >
-                    <span></span>
-                    {tool.enabled ? "READY" : "DISABLED"}
-                  </div>
-                </div>
-
-                <h3>{tool.name}</h3>
-                <p>{tool.description}</p>
-
-                <div className="tool-tags">
-                  <span>{tool.category}</span>
-
-                  {tool.generated && (
-                    <span className="generated-tag">
-                      ✦ Generated
-                    </span>
-                  )}
-
-                  {tool.verified && (
-                    <span className="verified-tag">
-                      ✓ Verified
-                    </span>
-                  )}
-                </div>
-
-                <div className="tool-card-footer">
-                  <span>{tool.runs} runs</span>
-
-                  <div>
-                    <button
-                      className="details-button"
-                      onClick={() => setSelectedTool(tool)}
-                    >
-                      Details
-                    </button>
-
-                    <label className="tool-switch">
-                      <input
-                        type="checkbox"
-                        checked={tool.enabled}
-                        onChange={() => toggleTool(tool.id)}
-                      />
-                      <span></span>
-                    </label>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-      </main>
-
-      {selectedTool && (
-        <div
-          className="tool-overlay"
-          onClick={() => setSelectedTool(null)}
+    <Shell
+      title="Tools"
+      subtitle="The right capability, ready when you need it."
+      notice={notice}
+      action={
+        <button
+          className="j-primary"
+          onClick={() => setCreate(true)}
         >
-          <aside
-            className="tool-details-panel"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <button
-              className="panel-close"
-              onClick={() => setSelectedTool(null)}
-            >
-              ×
-            </button>
+          + Create tool
+        </button>
+      }
+    >
+      <Stats
+        items={[
+          [items.filter((x) => x.enabled).length, "Enabled in demo"],
+          [
+            items.filter((x) => x.generated).length,
+            "Generated / drafts",
+          ],
+          [items.filter((x) => !x.enabled).length, "Disabled"],
+          [previews, "Previews this session"],
+        ]}
+      />
 
-            <p className="tools-eyebrow">TOOL DETAILS</p>
-
-            <div className="detail-icon">
-              {selectedTool.icon}
-            </div>
-
-            <h2>{selectedTool.name}</h2>
-
-            <div className="detail-status">
-              <span></span>
-              {selectedTool.enabled ? "Ready" : "Disabled"}
-            </div>
-
-            <DetailBlock
-              label="Description"
-              value={selectedTool.description}
-            />
-
-            <DetailBlock
-              label="Type"
-              value={
-                selectedTool.generated
-                  ? "Jarvis Generated Tool"
-                  : "System Tool"
-              }
-            />
-
-            <DetailBlock
-              label="Category"
-              value={selectedTool.category}
-            />
-
-            <DetailBlock
-              label="Executions"
-              value={`${selectedTool.runs} runs`}
-            />
-
-            <div className="detail-security">
-              <span>SECURITY</span>
-
-              <p>
-                {selectedTool.verified
-                  ? "✓ Sandbox verified"
-                  : "○ Awaiting sandbox verification"}
-              </p>
-            </div>
-
-            <button className="test-tool-button">
-              Test Tool
-            </button>
-          </aside>
+      <div className="j-heading">
+        <div>
+          <h2>Quick access</h2>
+          <p>Your most-used sample capabilities.</p>
         </div>
-      )}
+      </div>
 
-      {showCreate && (
-        <div className="tool-modal-background">
-          <div className="create-tool-modal">
-            <div className="modal-heading">
-              <div>
-                <p className="tools-eyebrow">
-                  NEW CAPABILITY
-                </p>
-                <h2>Create Tool</h2>
+      <div className="j-grid">
+        {[...items]
+          .sort((a, b) => b.runs - a.runs)
+          .slice(0, 3)
+          .map((x) => (
+            <button
+              className="j-card"
+              key={x.id}
+              onClick={() => inspect(x)}
+            >
+              <div className="j-row-top">
+                <span className="j-icon" aria-hidden="true">
+                  {x.icon}
+                </span>
+
+                <Badge active={x.enabled}>
+                  {x.enabled ? "Enabled" : "Disabled"}
+                </Badge>
               </div>
 
-              <button onClick={() => setShowCreate(false)}>
-                ×
-              </button>
+              <h3>{x.name}</h3>
+              <span className="j-meta">Inspect capability →</span>
+            </button>
+          ))}
+      </div>
+
+      <div className="j-heading">
+        <div>
+          <h2>Tool library</h2>
+          <p>Explore capabilities and control their demo availability.</p>
+        </div>
+
+        <span>{filtered.length} tools</span>
+      </div>
+
+      <Filters
+        {...{ search, setSearch, category, setCategory }}
+        options={["All", "System", "Files", "Web", "Generated"]}
+      />
+
+      <div className="j-grid">
+        {filtered.map((x) => (
+          <article className="j-card" key={x.id}>
+            <div className="j-row-top">
+              <span className="j-icon" aria-hidden="true">
+                {x.icon}
+              </span>
+
+              <Badge active={x.enabled}>
+                {x.enabled ? "Enabled" : "Disabled"}
+              </Badge>
             </div>
 
-            <label>
-              Tool Name
-              <input
-                value={newTool.name}
-                onChange={(event) =>
-                  setNewTool({
-                    ...newTool,
-                    name: event.target.value,
-                  })
+            <h3>{x.name}</h3>
+            <p>{x.description}</p>
+
+            <div className="j-actions">
+              <Badge>{x.category}</Badge>
+              {x.generated && <Badge>Generated draft</Badge>}
+            </div>
+
+            <div className="j-card-footer">
+              <button onClick={() => inspect(x)}>
+                Details
+              </button>
+
+              <button
+                aria-pressed={x.enabled}
+                aria-label={
+                  (x.enabled ? "Disable " : "Enable ") + x.name
                 }
-                placeholder="Example: Organize Documents"
+                onClick={() =>
+                  setItems((a) =>
+                    a.map((v) =>
+                      v.id === x.id
+                        ? { ...v, enabled: !v.enabled }
+                        : v
+                    )
+                  )
+                }
+              >
+                {x.enabled ? "Disable" : "Enable"}
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      {!filtered.length && (
+        <Empty
+          reset={() => {
+            setSearch("");
+            setCategory("All");
+          }}
+        />
+      )}
+
+      {tool && (
+        <Modal
+          title={tool.name}
+          close={() => setSelected(null)}
+        >
+          <Badge active={tool.enabled}>
+            {tool.enabled ? "Enabled in demo" : "Disabled"}
+          </Badge>
+
+          <dl className="j-detail">
+            <div>
+              <dt>Purpose</dt>
+              <dd>{tool.description}</dd>
+            </div>
+
+            <div>
+              <dt>Category</dt>
+              <dd>{tool.category}</dd>
+            </div>
+
+            <div>
+              <dt>Sample run history</dt>
+              <dd>{tool.runs} example runs</dd>
+            </div>
+
+            <div>
+              <dt>Verification</dt>
+              <dd>
+                {tool.verified
+                  ? "Verified in sample data only. No security test has been performed."
+                  : "Unverified draft. No executable code is attached."}
+              </dd>
+            </div>
+          </dl>
+
+          <button
+            className="j-primary"
+            disabled={!tool.enabled}
+            onClick={() => {
+              setPreviews((n) => n + 1);
+
+              setResult(
+                "Preview complete for “" +
+                  tool.name +
+                  "”. In the connected app, this capability would: " +
+                  tool.description +
+                  " This preview performed no system or network action."
+              );
+            }}
+          >
+            Preview tool
+          </button>
+
+          <div role="status">
+            {result && <p className="j-result">{result}</p>}
+          </div>
+        </Modal>
+      )}
+
+      {create && (
+        <Modal
+          title="Create tool draft"
+          close={() => setCreate(false)}
+        >
+          <form className="j-form" onSubmit={submit}>
+            <label>
+              Name
+              <input
+                name="name"
+                required
+                maxLength={80}
+                autoFocus
+                placeholder="e.g. Organize documents"
               />
             </label>
 
             <label>
               Description
               <textarea
-                value={newTool.description}
-                onChange={(event) =>
-                  setNewTool({
-                    ...newTool,
-                    description: event.target.value,
-                  })
-                }
-                placeholder="What should this tool do?"
+                name="description"
+                maxLength={800}
+                placeholder="Describe the capability…"
               />
             </label>
 
             <label>
               Category
-              <select
-                value={newTool.category}
-                onChange={(event) =>
-                  setNewTool({
-                    ...newTool,
-                    category: event.target.value,
-                  })
-                }
-              >
+              <select name="category">
                 <option>System</option>
                 <option>Files</option>
                 <option>Web</option>
               </select>
             </label>
 
-            <div className="modal-warning">
-              ✦ New tools should be sandbox tested before
-              being approved for use.
-            </div>
+            <p>
+              Create a demo entry to review. Code generation and
+              execution are not connected.
+            </p>
 
-            <div className="modal-actions">
+            <div className="j-actions">
               <button
-                className="cancel-button"
-                onClick={() => setShowCreate(false)}
+                type="button"
+                onClick={() => setCreate(false)}
               >
                 Cancel
               </button>
 
-              <button
-                className="tool-primary"
-                onClick={createTool}
-              >
-                Generate Tool
+              <button className="j-primary">
+                Create draft
               </button>
             </div>
-          </div>
-        </div>
+          </form>
+        </Modal>
       )}
+    </Shell>
+  );
+}
+
+// State is intentionally session-only. No network, filesystem or execution APIs.
+function Badge({ children, active = false }) {
+  return (
+    <span className={active ? "j-badge j-active" : "j-badge"}>
+      {children}
+    </span>
+  );
+}
+
+function Stats({ items }) {
+  return (
+    <section className="j-stats" aria-label="Overview">
+      {items.map(([value, label]) => (
+        <div className="j-stat" key={label}>
+          <span>{label}</span>
+          <strong>{value}</strong>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function Empty({ reset }) {
+  return (
+    <div className="j-empty">
+      <span aria-hidden="true">⌕</span>
+      <h3>Nothing here yet</h3>
+      <p>Try another search or add something new.</p>
+
+      <button onClick={reset}>Clear filters</button>
     </div>
   );
 }
 
-function StatCard({ value, label, status }) {
+function Filters({
+  search,
+  setSearch,
+  options,
+  category,
+  setCategory,
+}) {
   return (
-    <div className="tool-stat">
-      <span className={`stat-light ${status}`}></span>
-      <strong>{value}</strong>
-      <p>{label}</p>
+    <div className="j-controls">
+      <label className="j-search">
+        <span className="j-sr">Search library</span>
+
+        <input
+          type="search"
+          placeholder="Search by name or description…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </label>
+
+      <div className="j-tabs" aria-label="Filter library">
+        {options.map((item) => (
+          <button
+            key={item}
+            aria-pressed={category === item}
+            onClick={() => setCategory(item)}
+          >
+            {item}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
 
-function DetailBlock({ label, value }) {
+function Modal({ title, close, children }) {
+  const ref = useRef(null);
+  const heading = useId();
+
+  useEffect(() => {
+    const previous = document.activeElement;
+    const dialog = ref.current;
+
+    dialog.showModal();
+
+    return () => {
+      dialog.close();
+      previous?.focus();
+    };
+  }, []);
+
   return (
-    <div className="detail-block">
-      <span>{label}</span>
-      <p>{value}</p>
-    </div>
+    <dialog
+      className="j-modal"
+      ref={ref}
+      aria-labelledby={heading}
+      onCancel={(e) => {
+        e.preventDefault();
+        close();
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          const r = e.currentTarget.getBoundingClientRect();
+
+          if (
+            e.clientX < r.left ||
+            e.clientX > r.right ||
+            e.clientY < r.top ||
+            e.clientY > r.bottom
+          ) {
+            close();
+          }
+        }
+      }}
+    >
+      <header className="j-modal-head">
+        <div>
+          <p className="j-eyebrow">JARVIS / PREVIEW</p>
+          <h2 id={heading}>{title}</h2>
+        </div>
+
+        <button aria-label="Close dialog" onClick={close}>
+          ×
+        </button>
+      </header>
+
+      {children}
+    </dialog>
+  );
+}
+
+function Shell({ title, subtitle, action, notice, children }) {
+  return (
+    <main className="tools-page j-page">
+      <div className="j-container">
+        <header className="j-header">
+          <div>
+            <p className="j-eyebrow">JARVIS / WORKSPACE</p>
+            <h1>{title}</h1>
+            <p>{subtitle}</p>
+          </div>
+
+          {action}
+        </header>
+
+        <div className="j-demo">
+          <Badge active>Demo workspace</Badge>
+          <span>
+            Sample data · Changes reset when you leave this page.
+          </span>
+        </div>
+
+        {children}
+
+        <div className="j-notice" role="status" aria-live="polite">
+          {notice}
+        </div>
+      </div>
+    </main>
   );
 }
 

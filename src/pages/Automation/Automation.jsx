@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import "./Automation.css";
 
 const starterAutomations = [
@@ -38,343 +38,439 @@ const starterAutomations = [
 ];
 
 function Automation() {
-  const [automations, setAutomations] =
-    useState(starterAutomations);
-
+  const [items, setItems] = useState(starterAutomations);
   const [search, setSearch] = useState("");
-  const [showCreate, setShowCreate] = useState(false);
+  const [category, setCategory] = useState("All");
+  const [create, setCreate] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [activity, setActivity] = useState([
+    "Sample history · Morning Briefing preview completed.",
+    "Sample history · Project Backup paused.",
+  ]);
+  const [removed, setRemoved] = useState(null);
+  const [runs, setRuns] = useState(0);
 
-  const [newAutomation, setNewAutomation] = useState({
-    name: "",
-    description: "",
-    frequency: "Daily",
-    time: "08:00",
-  });
-
-  const filtered = useMemo(() => {
-    return automations.filter((automation) =>
-      automation.name
+  const filtered = items.filter(
+    (x) =>
+      (x.name + " " + x.description)
         .toLowerCase()
-        .includes(search.toLowerCase())
-    );
-  }, [automations, search]);
+        .includes(search.toLowerCase()) &&
+      (category === "All" ||
+        (category === "Enabled" ? x.enabled : !x.enabled))
+  );
 
-  const toggleAutomation = (id) => {
-    setAutomations((current) =>
-      current.map((automation) =>
-        automation.id === id
-          ? {
-              ...automation,
-              enabled: !automation.enabled,
-              status: automation.enabled
-                ? "Paused"
-                : "Ready",
-            }
-          : automation
-      )
-    );
+  const log = (text) => {
+    setActivity((a) => [text, ...a].slice(0, 6));
+    setNotice(text);
   };
 
-  const deleteAutomation = (id) => {
-    setAutomations((current) =>
-      current.filter((automation) => automation.id !== id)
-    );
-  };
+  function submit(e) {
+    e.preventDefault();
 
-  const createAutomation = () => {
-    if (!newAutomation.name.trim()) return;
+    const f = new FormData(e.currentTarget);
+    const name = f.get("name").trim();
 
-    setAutomations((current) => [
+    if (!name) return;
+
+    setItems((a) => [
       {
-        id: Date.now(),
-        name: newAutomation.name,
+        id: crypto.randomUUID(),
+        name,
         description:
-          newAutomation.description ||
-          "Custom Jarvis automation.",
-        schedule: `${newAutomation.frequency} • ${newAutomation.time}`,
-        nextRun: "Scheduled",
-        lastRun: "Never",
+          f.get("description").trim() || "Custom Jarvis workflow.",
+        schedule: f.get("frequency") + " · " + f.get("time"),
         enabled: true,
-        status: "Ready",
+        lastRun: "Not previewed",
       },
-      ...current,
+      ...a,
     ]);
 
-    setNewAutomation({
-      name: "",
-      description: "",
-      frequency: "Daily",
-      time: "08:00",
-    });
-
-    setShowCreate(false);
-  };
-
-  const activeCount = automations.filter(
-    (item) => item.enabled
-  ).length;
+    setCreate(false);
+    log(name + " added to this demo.");
+  }
 
   return (
-    <div className="automation-page">
-      <main className="automation-container">
-        <header className="automation-header">
-          <div>
-            <p className="auto-eyebrow">
-              JARVIS WORKFLOWS
-            </p>
-            <h1>Automation</h1>
-            <p>
-              Let Jarvis handle recurring tasks and workflows
-              automatically.
-            </p>
-          </div>
+    <Shell
+      title="Automation"
+      subtitle="Build a calmer day, one routine at a time."
+      notice={notice}
+      action={
+        <button
+          className="j-primary"
+          onClick={() => setCreate(true)}
+        >
+          + New automation
+        </button>
+      }
+    >
+      <Stats
+        items={[
+          [items.length, "Total workflows"],
+          [items.filter((x) => x.enabled).length, "Enabled in demo"],
+          [items.filter((x) => !x.enabled).length, "Paused"],
+          [runs, "Previews this session"],
+        ]}
+      />
 
-          <button
-            className="auto-primary"
-            onClick={() => setShowCreate(true)}
-          >
-            + New Automation
-          </button>
-        </header>
-
-        <div className="automation-stats">
-          <div>
-            <span className="pulse-dot"></span>
-            <strong>{activeCount}</strong>
-            <p>Active</p>
-          </div>
-
-          <div>
-            <strong>{automations.length}</strong>
-            <p>Total Workflows</p>
-          </div>
-
-          <div>
-            <strong>24</strong>
-            <p>Runs This Week</p>
-          </div>
-
-          <div>
-            <strong>96%</strong>
-            <p>Success Rate</p>
-          </div>
+      <div className="j-heading">
+        <div>
+          <h2>Your workflows</h2>
+          <p>Recurring routines, ready for you to shape.</p>
         </div>
 
-        <div className="automation-search">
-          <span>⌕</span>
-          <input
-            value={search}
-            onChange={(event) =>
-              setSearch(event.target.value)
-            }
-            placeholder="Search automations..."
-          />
-        </div>
+        <span>{filtered.length} shown</span>
+      </div>
 
-        <section className="automation-list">
-          <div className="auto-section-heading">
-            <h2>Your Automations</h2>
-            <span>{filtered.length} workflows</span>
-          </div>
+      <Filters
+        {...{ search, setSearch, category, setCategory }}
+        options={["All", "Enabled", "Paused"]}
+      />
 
-          {filtered.map((automation) => (
-            <article
-              className="automation-card"
-              key={automation.id}
-            >
-              <div className="automation-icon">⚡</div>
-
-              <div className="automation-info">
-                <div className="automation-name-row">
-                  <h3>{automation.name}</h3>
-
-                  <span
-                    className={`automation-status ${
-                      automation.enabled ? "active" : ""
-                    }`}
-                  >
-                    <i></i>
-                    {automation.enabled
-                      ? "ACTIVE"
-                      : "PAUSED"}
-                  </span>
-                </div>
-
-                <p>{automation.description}</p>
-
-                <div className="automation-meta">
-                  <span>◷ {automation.schedule}</span>
-                  <span>Next: {automation.nextRun}</span>
-                  <span>
-                    Last: {automation.lastRun}
-                  </span>
-                </div>
-              </div>
-
-              <div className="automation-actions">
-                <label className="automation-switch">
-                  <input
-                    type="checkbox"
-                    checked={automation.enabled}
-                    onChange={() =>
-                      toggleAutomation(automation.id)
-                    }
-                  />
-                  <span></span>
-                </label>
-
-                <button
-                  className="automation-delete"
-                  onClick={() =>
-                    deleteAutomation(automation.id)
-                  }
-                >
-                  Delete
-                </button>
-              </div>
-            </article>
-          ))}
-        </section>
-
-        <section className="activity-panel">
-          <div className="auto-section-heading">
-            <h2>Recent Activity</h2>
-          </div>
-
-          <Activity
-            text="Morning Briefing completed successfully"
-            time="Today • 8:00 AM"
-          />
-
-          <Activity
-            text="Organize Downloads completed"
-            time="Yesterday • 6:00 PM"
-          />
-
-          <Activity
-            text="Project Backup was paused"
-            time="Yesterday"
-            paused
-          />
-        </section>
-      </main>
-
-      {showCreate && (
-        <div className="automation-modal-background">
-          <div className="automation-modal">
-            <div className="automation-modal-header">
-              <div>
-                <p className="auto-eyebrow">
-                  NEW WORKFLOW
-                </p>
-                <h2>Create Automation</h2>
-              </div>
-
-              <button onClick={() => setShowCreate(false)}>
-                ×
-              </button>
+      <div className="j-stack">
+        {filtered.map((x) => (
+          <article className="j-card j-workflow" key={x.id}>
+            <div className="j-icon" aria-hidden="true">
+              ↻
             </div>
 
+            <div>
+              <div className="j-row-top">
+                <h3>{x.name}</h3>
+
+                <Badge active={x.enabled}>
+                  {x.enabled ? "Enabled" : "Paused"}
+                </Badge>
+              </div>
+
+              <p>{x.description}</p>
+
+              <div className="j-meta">
+                {x.schedule} ·{" "}
+                {x.enabled ? "Demo schedule only" : "Schedule paused"}
+              </div>
+
+              <div className="j-meta">{x.lastRun}</div>
+            </div>
+
+            <div className="j-actions">
+              <button
+                disabled={!x.enabled}
+                onClick={() => {
+                  setRuns((n) => n + 1);
+
+                  setItems((a) =>
+                    a.map((v) =>
+                      v.id === x.id
+                        ? { ...v, lastRun: "Previewed this session" }
+                        : v
+                    )
+                  );
+
+                  log(
+                    "Preview complete: " +
+                      x.name +
+                      ". No task was executed."
+                  );
+                }}
+              >
+                Preview
+              </button>
+
+              <button
+                aria-label={(x.enabled ? "Pause " : "Enable ") + x.name}
+                aria-pressed={x.enabled}
+                onClick={() => {
+                  setItems((a) =>
+                    a.map((v) =>
+                      v.id === x.id
+                        ? { ...v, enabled: !v.enabled }
+                        : v
+                    )
+                  );
+
+                  log(
+                    x.name +
+                      (x.enabled ? " paused." : " enabled in demo.")
+                  );
+                }}
+              >
+                {x.enabled ? "Pause" : "Enable"}
+              </button>
+
+              <button
+                className="j-danger"
+                aria-label={"Delete " + x.name}
+                onClick={() => {
+                  setRemoved(x);
+                  setItems((a) => a.filter((v) => v.id !== x.id));
+                  log(x.name + " removed. Undo is available below.");
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      {!filtered.length && (
+        <Empty
+          reset={() => {
+            setSearch("");
+            setCategory("All");
+          }}
+        />
+      )}
+
+      {removed && (
+        <div className="j-heading">
+          <p>Removed “{removed.name}”</p>
+
+          <button
+            onClick={() => {
+              setItems((a) => [removed, ...a]);
+              setRemoved(null);
+              setNotice("Workflow restored.");
+            }}
+          >
+            Undo delete
+          </button>
+        </div>
+      )}
+
+      <section className="j-panel">
+        <h2>Recent activity</h2>
+        <p>Sample history and your preview actions.</p>
+
+        {activity.map((text, i) => (
+          <div className="j-activity" key={i}>
+            {text}
+          </div>
+        ))}
+      </section>
+
+      {create && (
+        <Modal
+          title="Create automation"
+          close={() => setCreate(false)}
+        >
+          <form className="j-form" onSubmit={submit}>
             <label>
-              Automation Name
+              Name
               <input
-                value={newAutomation.name}
-                onChange={(event) =>
-                  setNewAutomation({
-                    ...newAutomation,
-                    name: event.target.value,
-                  })
-                }
-                placeholder="Example: Morning Briefing"
+                name="name"
+                required
+                maxLength={80}
+                autoFocus
+                placeholder="e.g. Morning briefing"
               />
             </label>
 
             <label>
               What should Jarvis do?
               <textarea
-                value={newAutomation.description}
-                onChange={(event) =>
-                  setNewAutomation({
-                    ...newAutomation,
-                    description: event.target.value,
-                  })
-                }
-                placeholder="Describe the workflow..."
+                name="description"
+                maxLength={800}
+                placeholder="Describe the routine…"
               />
             </label>
 
-            <div className="automation-form-grid">
-              <label>
-                Frequency
-                <select
-                  value={newAutomation.frequency}
-                  onChange={(event) =>
-                    setNewAutomation({
-                      ...newAutomation,
-                      frequency: event.target.value,
-                    })
-                  }
-                >
-                  <option>Daily</option>
-                  <option>Weekly</option>
-                  <option>Weekdays</option>
-                  <option>Monthly</option>
-                </select>
-              </label>
+            <label>
+              Frequency
+              <select name="frequency">
+                <option>Daily</option>
+                <option>Weekly on Friday</option>
+                <option>Weekdays</option>
+                <option>Monthly on the 1st</option>
+              </select>
+            </label>
 
-              <label>
-                Time
-                <input
-                  type="time"
-                  value={newAutomation.time}
-                  onChange={(event) =>
-                    setNewAutomation({
-                      ...newAutomation,
-                      time: event.target.value,
-                    })
-                  }
-                />
-              </label>
-            </div>
+            <label>
+              Time
+              <input
+                name="time"
+                type="time"
+                defaultValue="08:00"
+                required
+              />
+            </label>
 
-            <div className="automation-modal-actions">
+            <p>
+              Save a demo routine. Scheduling is not connected yet.
+            </p>
+
+            <div className="j-actions">
               <button
-                className="auto-cancel"
-                onClick={() => setShowCreate(false)}
+                type="button"
+                onClick={() => setCreate(false)}
               >
                 Cancel
               </button>
 
-              <button
-                className="auto-primary"
-                onClick={createAutomation}
-              >
-                Create Automation
+              <button className="j-primary">
+                Create automation
               </button>
             </div>
-          </div>
-        </div>
+          </form>
+        </Modal>
       )}
+    </Shell>
+  );
+}
+
+// State is intentionally session-only. No network, filesystem or execution APIs.
+function Badge({ children, active = false }) {
+  return (
+    <span className={active ? "j-badge j-active" : "j-badge"}>
+      {children}
+    </span>
+  );
+}
+
+function Stats({ items }) {
+  return (
+    <section className="j-stats" aria-label="Overview">
+      {items.map(([value, label]) => (
+        <div className="j-stat" key={label}>
+          <span>{label}</span>
+          <strong>{value}</strong>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function Empty({ reset }) {
+  return (
+    <div className="j-empty">
+      <span aria-hidden="true">⌕</span>
+      <h3>Nothing here yet</h3>
+      <p>Try another search or add something new.</p>
+
+      <button onClick={reset}>Clear filters</button>
     </div>
   );
 }
 
-function Activity({ text, time, paused }) {
+function Filters({
+  search,
+  setSearch,
+  options,
+  category,
+  setCategory,
+}) {
   return (
-    <div className="activity-row">
-      <div
-        className={`activity-check ${
-          paused ? "paused" : ""
-        }`}
-      >
-        {paused ? "—" : "✓"}
-      </div>
+    <div className="j-controls">
+      <label className="j-search">
+        <span className="j-sr">Search library</span>
 
-      <div>
-        <strong>{text}</strong>
-        <span>{time}</span>
+        <input
+          type="search"
+          placeholder="Search by name or description…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </label>
+
+      <div className="j-tabs" aria-label="Filter library">
+        {options.map((item) => (
+          <button
+            key={item}
+            aria-pressed={category === item}
+            onClick={() => setCategory(item)}
+          >
+            {item}
+          </button>
+        ))}
       </div>
     </div>
+  );
+}
+
+function Modal({ title, close, children }) {
+  const ref = useRef(null);
+  const heading = useId();
+
+  useEffect(() => {
+    const previous = document.activeElement;
+    const dialog = ref.current;
+
+    dialog.showModal();
+
+    return () => {
+      dialog.close();
+      previous?.focus();
+    };
+  }, []);
+
+  return (
+    <dialog
+      className="j-modal"
+      ref={ref}
+      aria-labelledby={heading}
+      onCancel={(e) => {
+        e.preventDefault();
+        close();
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          const r = e.currentTarget.getBoundingClientRect();
+
+          if (
+            e.clientX < r.left ||
+            e.clientX > r.right ||
+            e.clientY < r.top ||
+            e.clientY > r.bottom
+          ) {
+            close();
+          }
+        }
+      }}
+    >
+      <header className="j-modal-head">
+        <div>
+          <p className="j-eyebrow">JARVIS / PREVIEW</p>
+          <h2 id={heading}>{title}</h2>
+        </div>
+
+        <button aria-label="Close dialog" onClick={close}>
+          ×
+        </button>
+      </header>
+
+      {children}
+    </dialog>
+  );
+}
+
+function Shell({ title, subtitle, action, notice, children }) {
+  return (
+    <main className="automation-page j-page">
+      <div className="j-container">
+        <header className="j-header">
+          <div>
+            <p className="j-eyebrow">JARVIS / WORKSPACE</p>
+            <h1>{title}</h1>
+            <p>{subtitle}</p>
+          </div>
+
+          {action}
+        </header>
+
+        <div className="j-demo">
+          <Badge active>Demo workspace</Badge>
+          <span>
+            Sample data · Changes reset when you leave this page.
+          </span>
+        </div>
+
+        {children}
+
+        <div className="j-notice" role="status" aria-live="polite">
+          {notice}
+        </div>
+      </div>
+    </main>
   );
 }
 

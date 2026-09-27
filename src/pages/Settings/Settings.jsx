@@ -4,29 +4,65 @@ import "./Settings.css";
 function Settings() {
   const [activeSection, setActiveSection] = useState("Profile");
 
-  // Profile
+  // ==============================
+  // PROFILE
+  // ==============================
   const [profilePicture, setProfilePicture] = useState(null);
 
-  // Appearance
+  // ==============================
+  // APPEARANCE
+  // ==============================
   const [theme, setTheme] = useState("Dark");
 
-  // AI
+  const [systemTheme, setSystemTheme] = useState(
+    window.matchMedia("(prefers-color-scheme: light)").matches
+      ? "Light"
+      : "Dark"
+  );
+
+  // ==============================
+  // AI / API
+  // ==============================
   const [inferenceMode, setInferenceMode] = useState("Automatic");
   const [remoteFallback, setRemoteFallback] = useState(true);
 
-  // Memory
+  const [activeModel, setActiveModel] = useState(
+    "phi-3-mini-4k-instruct-q4"
+  );
+
+  const [apiKey, setApiKey] = useState("");
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [apiConnected, setApiConnected] = useState(false);
+
+  // Placeholder values until backend is connected
+  const tokensUsed = 21580;
+  const tokenLimit = 100000;
+  const tokensRemaining = tokenLimit - tokensUsed;
+
+  const tokenPercentage = Math.round(
+    (tokensRemaining / tokenLimit) * 100
+  );
+
+  // ==============================
+  // MEMORY
+  // ==============================
   const [memoryEnabled, setMemoryEnabled] = useState(true);
   const [saveHistory, setSaveHistory] = useState(true);
-  const [rememberPreferences, setRememberPreferences] = useState(true);
+  const [rememberPreferences, setRememberPreferences] =
+    useState(true);
   const [learnWorkflows, setLearnWorkflows] = useState(true);
 
-  // Tools
+  // ==============================
+  // TOOLS & SECURITY
+  // ==============================
   const [toolsEnabled, setToolsEnabled] = useState(true);
   const [toolGeneration, setToolGeneration] = useState(true);
   const [sandboxTools, setSandboxTools] = useState(true);
   const [toolApproval, setToolApproval] = useState("Always Ask");
 
-  // Voice
+  // ==============================
+  // MICROPHONE
+  // ==============================
   const [microphones, setMicrophones] = useState([]);
   const [selectedMicrophone, setSelectedMicrophone] = useState("");
   const [isTestingMic, setIsTestingMic] = useState(false);
@@ -37,19 +73,26 @@ function Settings() {
   const streamRef = useRef(null);
   const animationRef = useRef(null);
 
-  // System
+  // ==============================
+  // TEXT TO SPEECH
+  // ==============================
+  const [ttsEnabled, setTtsEnabled] = useState(true);
+  const [voices, setVoices] = useState([]);
+  const [selectedVoice, setSelectedVoice] = useState("");
+  const [speechRate, setSpeechRate] = useState(1);
+  const [speechVolume, setSpeechVolume] = useState(1);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // ==============================
+  // SYSTEM
+  // ==============================
   const [notifications, setNotifications] = useState(true);
   const [launchOnStartup, setLaunchOnStartup] = useState(false);
   const [runInBackground, setRunInBackground] = useState(true);
 
-  // Placeholder values until backend is connected
-  const tokensUsed = 21580;
-  const tokenLimit = 100000;
-  const tokensRemaining = tokenLimit - tokensUsed;
-  const tokenPercentage = Math.round(
-    (tokensRemaining / tokenLimit) * 100
-  );
-
+  // ==============================
+  // SETTINGS SECTIONS
+  // ==============================
   const sections = [
     "Profile",
     "Appearance",
@@ -60,12 +103,94 @@ function Settings() {
     "System",
   ];
 
+  // ==============================
+  // MICROPHONE CLEANUP
+  // ==============================
   useEffect(() => {
     return () => {
-      stopMicTest();
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+
+      if (streamRef.current) {
+        streamRef.current
+          .getTracks()
+          .forEach((track) => track.stop());
+      }
+
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
     };
   }, []);
 
+  // ==============================
+  // SYSTEM THEME
+  // ==============================
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(
+      "(prefers-color-scheme: light)"
+    );
+
+    const handleThemeChange = (event) => {
+      setSystemTheme(event.matches ? "Light" : "Dark");
+    };
+
+    mediaQuery.addEventListener("change", handleThemeChange);
+
+    return () => {
+      mediaQuery.removeEventListener(
+        "change",
+        handleThemeChange
+      );
+    };
+  }, []);
+
+  // ==============================
+  // LOAD TEXT TO SPEECH VOICES
+  // ==============================
+  useEffect(() => {
+    if (!("speechSynthesis" in window)) {
+      return;
+    }
+
+    const loadVoices = () => {
+      const availableVoices =
+        window.speechSynthesis.getVoices();
+
+      setVoices(availableVoices);
+
+      if (availableVoices.length > 0) {
+        setSelectedVoice((currentVoice) => {
+          if (currentVoice) {
+            return currentVoice;
+          }
+
+          return availableVoices[0].voiceURI;
+        });
+      }
+    };
+
+    loadVoices();
+
+    window.speechSynthesis.addEventListener(
+      "voiceschanged",
+      loadVoices
+    );
+
+    return () => {
+      window.speechSynthesis.removeEventListener(
+        "voiceschanged",
+        loadVoices
+      );
+
+      window.speechSynthesis.cancel();
+    };
+  }, []);
+
+  // ==============================
+  // PROFILE PICTURE
+  // ==============================
   const handleProfilePicture = (event) => {
     const file = event.target.files[0];
 
@@ -75,12 +200,24 @@ function Settings() {
     }
   };
 
+  // ==============================
+  // MICROPHONE FUNCTIONS
+  // ==============================
   const loadMicrophones = async () => {
     try {
-      const permissionStream =
-        await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!navigator.mediaDevices) {
+        alert("Microphone access is not supported on this device.");
+        return;
+      }
 
-      permissionStream.getTracks().forEach((track) => track.stop());
+      const permissionStream =
+        await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
+
+      permissionStream
+        .getTracks()
+        .forEach((track) => track.stop());
 
       const devices =
         await navigator.mediaDevices.enumerateDevices();
@@ -96,15 +233,27 @@ function Settings() {
       }
     } catch (error) {
       console.error("Could not access microphones:", error);
-      alert("Jarvis could not access your microphone.");
+
+      alert(
+        "Jarvis could not access your microphone. Check your microphone permissions."
+      );
     }
   };
 
   const startMicTest = async () => {
     try {
+      if (!navigator.mediaDevices) {
+        alert("Microphone access is not supported.");
+        return;
+      }
+
       const constraints = {
         audio: selectedMicrophone
-          ? { deviceId: { exact: selectedMicrophone } }
+          ? {
+              deviceId: {
+                exact: selectedMicrophone,
+              },
+            }
           : true,
       };
 
@@ -138,10 +287,17 @@ function Settings() {
         analyser.getByteFrequencyData(dataArray);
 
         const average =
-          dataArray.reduce((sum, value) => sum + value, 0) /
-          dataArray.length;
+          dataArray.reduce(
+            (sum, value) => sum + value,
+            0
+          ) / dataArray.length;
 
-        setMicLevel(Math.min(100, Math.round(average * 1.5)));
+        setMicLevel(
+          Math.min(
+            100,
+            Math.round(average * 1.5)
+          )
+        );
 
         animationRef.current =
           requestAnimationFrame(updateLevel);
@@ -150,24 +306,33 @@ function Settings() {
       updateLevel();
     } catch (error) {
       console.error("Microphone test failed:", error);
-      alert("Unable to test this microphone.");
+
+      alert(
+        "Unable to test this microphone. Check your device permissions."
+      );
     }
   };
 
   const stopMicTest = () => {
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
     }
 
     if (streamRef.current) {
       streamRef.current
         .getTracks()
         .forEach((track) => track.stop());
+
+      streamRef.current = null;
     }
 
     if (audioContextRef.current) {
       audioContextRef.current.close();
+      audioContextRef.current = null;
     }
+
+    analyserRef.current = null;
 
     setIsTestingMic(false);
     setMicLevel(0);
@@ -181,18 +346,109 @@ function Settings() {
     }
   };
 
+  // ==============================
+  // TEXT TO SPEECH TEST
+  // ==============================
+  const testVoice = () => {
+    if (!ttsEnabled) {
+      alert("Text-to-Speech is currently disabled.");
+      return;
+    }
+
+    if (!("speechSynthesis" in window)) {
+      alert(
+        "Text-to-Speech is not supported on this device."
+      );
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    const message = new SpeechSynthesisUtterance(
+      "Jarvis online. Voice systems are functioning normally."
+    );
+
+    const voice = voices.find(
+      (item) => item.voiceURI === selectedVoice
+    );
+
+    if (voice) {
+      message.voice = voice;
+    }
+
+    message.rate = speechRate;
+    message.volume = speechVolume;
+
+    message.onstart = () => {
+      setIsSpeaking(true);
+    };
+
+    message.onend = () => {
+      setIsSpeaking(false);
+    };
+
+    message.onerror = () => {
+      setIsSpeaking(false);
+    };
+
+    window.speechSynthesis.speak(message);
+  };
+
+  // ==============================
+  // API MOCK CONNECTION
+  // ==============================
+  const testApiConnection = () => {
+    if (!apiKey.trim()) {
+      setApiConnected(false);
+
+      alert(
+        "Enter an API key before testing the connection."
+      );
+
+      return;
+    }
+
+    // Frontend demo only.
+    // The real connection check should be handled securely
+    // by the backend.
+    setApiConnected(true);
+
+    alert(
+      "Frontend demo: API key detected. Backend connection testing will be added later."
+    );
+  };
+
+  const removeApiKey = () => {
+    setApiKey("");
+    setApiConnected(false);
+    setShowApiKey(false);
+  };
+
+  // ==============================
+  // SAVE SETTINGS
+  // ==============================
   const saveSettings = () => {
     alert("Jarvis settings saved.");
   };
 
+  // If System is selected, follow the operating system theme.
+  const currentTheme =
+    theme === "System" ? systemTheme : theme;
+
   return (
     <div
       className={`settings-page ${
-        theme === "Light" ? "light-theme" : ""
+        currentTheme === "Light"
+          ? "light-theme"
+          : ""
       }`}
     >
       <div className="ambient-glow glow-one"></div>
       <div className="ambient-glow glow-two"></div>
+
+      {/* =========================
+          SETTINGS SIDEBAR
+          ========================= */}
 
       <aside className="settings-sidebar">
         <div className="jarvis-brand">
@@ -215,28 +471,67 @@ function Settings() {
                   ? "nav-item active"
                   : "nav-item"
               }
-              onClick={() => setActiveSection(section)}
+              onClick={() =>
+                setActiveSection(section)
+              }
             >
               <span className="nav-dot"></span>
+
               {section}
             </button>
           ))}
         </nav>
 
         <div className="sidebar-status">
-          <div className="status-title">SYSTEM STATUS</div>
+          <div className="status-title">
+            SYSTEM STATUS
+          </div>
 
-          <StatusLine label="Local LLM" value="Online" />
-          <StatusLine label="Tools" value="Ready" />
-          <StatusLine label="Cloud AI" value="Ready" />
+          <StatusLine
+            label="Local LLM"
+            value="Online"
+          />
+
+          <StatusLine
+            label="Tools"
+            value="Ready"
+          />
+
+          <StatusLine
+            label="Cloud AI"
+            value={
+              apiConnected
+                ? "Ready"
+                : "Offline"
+            }
+            active={apiConnected}
+          />
+
+          <StatusLine
+            label="Voice"
+            value={
+              ttsEnabled
+                ? "Ready"
+                : "Disabled"
+            }
+            active={ttsEnabled}
+          />
         </div>
       </aside>
+
+      {/* =========================
+          MAIN SETTINGS
+          ========================= */}
 
       <main className="settings-main">
         <header className="settings-header">
           <div>
-            <p className="eyebrow">JARVIS CONTROL CENTER</p>
+            <p className="eyebrow">
+              JARVIS CONTROL CENTER
+            </p>
+
             <h1>{activeSection}</h1>
+
             <p>
               Configure how your personal intelligence
               works for you.
@@ -253,6 +548,10 @@ function Settings() {
           className="settings-content"
           key={activeSection}
         >
+          {/* =========================
+              PROFILE
+              ========================= */}
+
           {activeSection === "Profile" && (
             <>
               <SettingsCard
@@ -274,6 +573,7 @@ function Settings() {
 
                     <label className="secondary-button">
                       Change Photo
+
                       <input
                         type="file"
                         accept="image/*"
@@ -303,7 +603,10 @@ function Settings() {
                       <span>Password</span>
 
                       <div className="password-row">
-                        <strong>••••••••••••</strong>
+                        <strong>
+                          ••••••••••••
+                        </strong>
+
                         <button className="text-button">
                           Change Password
                         </button>
@@ -325,41 +628,137 @@ function Settings() {
             </>
           )}
 
+          {/* =========================
+              APPEARANCE
+              ========================= */}
+
           {activeSection === "Appearance" && (
             <SettingsCard
               title="Interface"
               subtitle="Choose how Jarvis looks on this device."
             >
               <div className="theme-options">
-                {["Dark", "Light", "System"].map(
-                  (option) => (
-                    <button
-                      key={option}
-                      className={
-                        theme === option
-                          ? "theme-card selected"
-                          : "theme-card"
-                      }
-                      onClick={() => setTheme(option)}
+                {[
+                  "Dark",
+                  "Light",
+                  "System",
+                ].map((option) => (
+                  <button
+                    key={option}
+                    className={
+                      theme === option
+                        ? "theme-card selected"
+                        : "theme-card"
+                    }
+                    onClick={() =>
+                      setTheme(option)
+                    }
+                  >
+                    <div
+                      className={`theme-preview ${option.toLowerCase()}`}
                     >
-                      <div
-                        className={`theme-preview ${option.toLowerCase()}`}
-                      >
-                        <div></div>
-                        <span></span>
-                        <span></span>
-                      </div>
+                      <div></div>
+                      <span></span>
+                      <span></span>
+                    </div>
 
-                      <strong>{option}</strong>
-                    </button>
-                  )
-                )}
+                    <strong>
+                      {option}
+                    </strong>
+                  </button>
+                ))}
               </div>
             </SettingsCard>
           )}
 
+          {/* =========================
+              AI & USAGE
+              ========================= */}
+
           {activeSection === "AI & Usage" && (
             <>
+              {/* ACTIVE MODEL */}
+
+              <SettingsCard
+                title="Active AI"
+                subtitle="Models currently available to Jarvis."
+              >
+                <div className="model-status-grid">
+                  <button
+                    className={`model-status-card ${
+                      activeModel ===
+                      "phi-3-mini-4k-instruct-q4"
+                        ? "selected"
+                        : ""
+                    }`}
+                    onClick={() =>
+                      setActiveModel(
+                        "phi-3-mini-4k-instruct-q4"
+                      )
+                    }
+                  >
+                    <div className="model-status-top">
+                      <span className="status-dot"></span>
+                      LOCAL
+                    </div>
+
+                    <strong>
+                      Phi-3 Mini
+                    </strong>
+
+                    <p>
+                      phi-3-mini-4k-instruct-q4
+                    </p>
+
+                    <small>
+                      Fast • Private • No cloud tokens
+                    </small>
+                  </button>
+
+                  <button
+                    className={`model-status-card ${
+                      activeModel === "Cloud AI"
+                        ? "selected"
+                        : ""
+                    }`}
+                    onClick={() =>
+                      setActiveModel(
+                        "Cloud AI"
+                      )
+                    }
+                  >
+                    <div className="model-status-top cloud">
+                      <span className="status-dot"></span>
+                      CLOUD
+                    </div>
+
+                    <strong>
+                      Cloud AI
+                    </strong>
+
+                    <p>
+                      Remote intelligence model
+                    </p>
+
+                    <small>
+                      Powerful • Remote • Uses API tokens
+                    </small>
+                  </button>
+                </div>
+
+                <div className="active-model-line">
+                  <span>
+                    Currently Selected
+                  </span>
+
+                  <strong>
+                    {activeModel}
+                  </strong>
+                </div>
+              </SettingsCard>
+
+              {/* TOKEN USAGE */}
+
               <SettingsCard
                 title="AI Usage"
                 subtitle="Cloud AI usage for your current plan."
@@ -370,7 +769,9 @@ function Settings() {
                       {tokensRemaining.toLocaleString()}
                     </span>
 
-                    <p>cloud tokens remaining</p>
+                    <p>
+                      cloud tokens remaining
+                    </p>
                   </div>
 
                   <div className="token-percent">
@@ -400,7 +801,10 @@ function Settings() {
                   <span className="status-dot"></span>
 
                   <div>
-                    <strong>Local AI</strong>
+                    <strong>
+                      Local AI
+                    </strong>
+
                     <p>
                       Local inference does not use your
                       cloud token allowance.
@@ -408,6 +812,111 @@ function Settings() {
                   </div>
                 </div>
               </SettingsCard>
+
+              {/* API CONNECTION */}
+
+              <SettingsCard
+                title="API Connection"
+                subtitle="Configure Jarvis cloud intelligence access."
+              >
+                <div className="api-status-row">
+                  <div>
+                    <span
+                      className={`api-status-dot ${
+                        apiConnected
+                          ? "connected"
+                          : ""
+                      }`}
+                    ></span>
+
+                    <div>
+                      <strong>
+                        {apiConnected
+                          ? "Cloud API Connected"
+                          : "Cloud API Not Connected"}
+                      </strong>
+
+                      <p>
+                        Used when Jarvis requires
+                        remote inference.
+                      </p>
+                    </div>
+                  </div>
+
+                  <span
+                    className={`api-badge ${
+                      apiConnected
+                        ? "connected"
+                        : ""
+                    }`}
+                  >
+                    {apiConnected
+                      ? "CONNECTED"
+                      : "DISCONNECTED"}
+                  </span>
+                </div>
+
+                <div className="api-key-area">
+                  <label>
+                    API KEY
+                  </label>
+
+                  <div className="api-key-input">
+                    <input
+                      type={
+                        showApiKey
+                          ? "text"
+                          : "password"
+                      }
+                      value={apiKey}
+                      onChange={(event) =>
+                        setApiKey(
+                          event.target.value
+                        )
+                      }
+                      placeholder="Enter API key"
+                      autoComplete="off"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowApiKey(
+                          !showApiKey
+                        )
+                      }
+                    >
+                      {showApiKey
+                        ? "Hide"
+                        : "Show"}
+                    </button>
+                  </div>
+
+                  <p>
+                    API credentials should be stored
+                    securely by the backend in the
+                    production version of Jarvis.
+                  </p>
+                </div>
+
+                <div className="api-actions">
+                  <button
+                    className="secondary-button"
+                    onClick={testApiConnection}
+                  >
+                    Test Connection
+                  </button>
+
+                  <button
+                    className="text-button"
+                    onClick={removeApiKey}
+                  >
+                    Remove Key
+                  </button>
+                </div>
+              </SettingsCard>
+
+              {/* INFERENCE */}
 
               <SettingsCard
                 title="Inference"
@@ -435,7 +944,9 @@ function Settings() {
                       </span>
 
                       <div>
-                        <strong>{mode}</strong>
+                        <strong>
+                          {mode}
+                        </strong>
 
                         <p>
                           {mode === "Automatic" &&
@@ -457,7 +968,9 @@ function Settings() {
                   description="Use cloud inference when the local model cannot complete a request."
                   checked={remoteFallback}
                   onChange={() =>
-                    setRemoteFallback(!remoteFallback)
+                    setRemoteFallback(
+                      !remoteFallback
+                    )
                   }
                 />
 
@@ -465,9 +978,18 @@ function Settings() {
                   label="Local Model"
                   value="phi-3-mini-4k-instruct-q4"
                 />
+
+                <InfoField
+                  label="Selected Model"
+                  value={activeModel}
+                />
               </SettingsCard>
             </>
           )}
+
+          {/* =========================
+              MEMORY
+              ========================= */}
 
           {activeSection === "Memory" && (
             <SettingsCard
@@ -479,7 +1001,9 @@ function Settings() {
                 description="Allow Jarvis to remember useful information across conversations."
                 checked={memoryEnabled}
                 onChange={() =>
-                  setMemoryEnabled(!memoryEnabled)
+                  setMemoryEnabled(
+                    !memoryEnabled
+                  )
                 }
               />
 
@@ -488,7 +1012,9 @@ function Settings() {
                 description="Save your previous conversations."
                 checked={saveHistory}
                 onChange={() =>
-                  setSaveHistory(!saveHistory)
+                  setSaveHistory(
+                    !saveHistory
+                  )
                 }
               />
 
@@ -508,16 +1034,21 @@ function Settings() {
                 description="Allow Jarvis to learn frequently used workflows and actions."
                 checked={learnWorkflows}
                 onChange={() =>
-                  setLearnWorkflows(!learnWorkflows)
+                  setLearnWorkflows(
+                    !learnWorkflows
+                  )
                 }
               />
 
               <div className="danger-area">
                 <div>
-                  <strong>Clear Jarvis Memory</strong>
+                  <strong>
+                    Clear Jarvis Memory
+                  </strong>
+
                   <p>
-                    Remove information Jarvis has remembered
-                    about you.
+                    Remove information Jarvis has
+                    remembered about you.
                   </p>
                 </div>
 
@@ -527,6 +1058,10 @@ function Settings() {
               </div>
             </SettingsCard>
           )}
+
+          {/* =========================
+              TOOLS & SECURITY
+              ========================= */}
 
           {activeSection === "Tools & Security" && (
             <SettingsCard
@@ -538,7 +1073,9 @@ function Settings() {
                 description="Allow Jarvis to use approved tools."
                 checked={toolsEnabled}
                 onChange={() =>
-                  setToolsEnabled(!toolsEnabled)
+                  setToolsEnabled(
+                    !toolsEnabled
+                  )
                 }
               />
 
@@ -547,7 +1084,9 @@ function Settings() {
                 description="Allow Jarvis to create tools when it encounters an unsupported request."
                 checked={toolGeneration}
                 onChange={() =>
-                  setToolGeneration(!toolGeneration)
+                  setToolGeneration(
+                    !toolGeneration
+                  )
                 }
               />
 
@@ -556,44 +1095,70 @@ function Settings() {
                 description="Test newly generated tools in an isolated environment before use."
                 checked={sandboxTools}
                 onChange={() =>
-                  setSandboxTools(!sandboxTools)
+                  setSandboxTools(
+                    !sandboxTools
+                  )
                 }
               />
 
               <div className="setting-row">
                 <div>
-                  <h3>Generated Tool Approval</h3>
+                  <h3>
+                    Generated Tool Approval
+                  </h3>
+
                   <p>
-                    Choose when Jarvis needs permission before
-                    running a generated tool.
+                    Choose when Jarvis needs
+                    permission before running a
+                    generated tool.
                   </p>
                 </div>
 
                 <select
                   value={toolApproval}
                   onChange={(event) =>
-                    setToolApproval(event.target.value)
+                    setToolApproval(
+                      event.target.value
+                    )
                   }
                 >
-                  <option>Always Ask</option>
-                  <option>Ask for Sensitive Actions</option>
-                  <option>Run Approved Tools</option>
+                  <option>
+                    Always Ask
+                  </option>
+
+                  <option>
+                    Ask for Sensitive Actions
+                  </option>
+
+                  <option>
+                    Run Approved Tools
+                  </option>
                 </select>
               </div>
             </SettingsCard>
           )}
 
+          {/* =========================
+              VOICE
+              ========================= */}
+
           {activeSection === "Voice" && (
             <>
+              {/* VOICE INPUT */}
+
               <SettingsCard
                 title="Voice Input"
                 subtitle="Configure and test the microphone Jarvis uses to hear you."
               >
                 <div className="setting-row">
                   <div>
-                    <h3>Input Device</h3>
+                    <h3>
+                      Input Device
+                    </h3>
+
                     <p>
-                      Select the microphone Jarvis should use.
+                      Select the microphone Jarvis
+                      should use.
                     </p>
                   </div>
 
@@ -611,15 +1176,26 @@ function Settings() {
                         Select microphone
                       </option>
 
-                      {microphones.map((microphone, index) => (
-                        <option
-                          key={microphone.deviceId}
-                          value={microphone.deviceId}
-                        >
-                          {microphone.label ||
-                            `Microphone ${index + 1}`}
-                        </option>
-                      ))}
+                      {microphones.map(
+                        (
+                          microphone,
+                          index
+                        ) => (
+                          <option
+                            key={
+                              microphone.deviceId
+                            }
+                            value={
+                              microphone.deviceId
+                            }
+                          >
+                            {microphone.label ||
+                              `Microphone ${
+                                index + 1
+                              }`}
+                          </option>
+                        )
+                      )}
                     </select>
 
                     <button
@@ -681,33 +1257,182 @@ function Settings() {
                 </div>
               </SettingsCard>
 
-              <SettingsCard
-                title="Voice Output"
-                subtitle="Jarvis voice responses are planned for a future version."
-              >
-                <div className="coming-soon">
-                  <div className="voice-wave">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                  </div>
+              {/* TEXT TO SPEECH */}
 
+              <SettingsCard
+                title="Text-to-Speech"
+                subtitle="Configure how Jarvis speaks responses aloud."
+              >
+                <SettingToggle
+                  title="Voice Responses"
+                  description="Allow Jarvis to respond using synthesized speech."
+                  checked={ttsEnabled}
+                  onChange={() =>
+                    setTtsEnabled(
+                      !ttsEnabled
+                    )
+                  }
+                />
+
+                <div className="setting-row">
                   <div>
-                    <strong>Text-to-Speech</strong>
+                    <h3>
+                      Voice
+                    </h3>
+
                     <p>
-                      Voice responses are coming soon.
+                      Choose the voice Jarvis should
+                      use for spoken responses.
                     </p>
                   </div>
 
-                  <span className="coming-badge">
-                    COMING SOON
-                  </span>
+                  <select
+                    value={selectedVoice}
+                    onChange={(event) =>
+                      setSelectedVoice(
+                        event.target.value
+                      )
+                    }
+                    disabled={!ttsEnabled}
+                  >
+                    {voices.length === 0 && (
+                      <option value="">
+                        Default System Voice
+                      </option>
+                    )}
+
+                    {voices.map((voice) => (
+                      <option
+                        key={voice.voiceURI}
+                        value={voice.voiceURI}
+                      >
+                        {voice.name} ({voice.lang})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="setting-row">
+                  <div>
+                    <h3>
+                      Speech Speed
+                    </h3>
+
+                    <p>
+                      Control how quickly Jarvis
+                      speaks.
+                    </p>
+                  </div>
+
+                  <div className="range-control">
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="2"
+                      step="0.1"
+                      value={speechRate}
+                      disabled={!ttsEnabled}
+                      onChange={(event) =>
+                        setSpeechRate(
+                          Number(
+                            event.target.value
+                          )
+                        )
+                      }
+                    />
+
+                    <span>
+                      {speechRate.toFixed(1)}x
+                    </span>
+                  </div>
+                </div>
+
+                <div className="setting-row">
+                  <div>
+                    <h3>
+                      Voice Volume
+                    </h3>
+
+                    <p>
+                      Adjust Jarvis speech output
+                      volume.
+                    </p>
+                  </div>
+
+                  <div className="range-control">
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value={speechVolume}
+                      disabled={!ttsEnabled}
+                      onChange={(event) =>
+                        setSpeechVolume(
+                          Number(
+                            event.target.value
+                          )
+                        )
+                      }
+                    />
+
+                    <span>
+                      {Math.round(
+                        speechVolume * 100
+                      )}
+                      %
+                    </span>
+                  </div>
+                </div>
+
+                <div className="tts-test">
+                  <div
+                    className={`voice-wave ${
+                      isSpeaking
+                        ? "speaking"
+                        : ""
+                    }`}
+                  >
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+
+                  <div className="tts-test-info">
+                    <strong>
+                      {isSpeaking
+                        ? "Jarvis is speaking..."
+                        : "Test Jarvis Voice"}
+                    </strong>
+
+                    <p>
+                      Preview the selected voice,
+                      speed and volume.
+                    </p>
+                  </div>
+
+                  <button
+                    className="primary-button"
+                    onClick={testVoice}
+                    disabled={
+                      !ttsEnabled ||
+                      isSpeaking
+                    }
+                  >
+                    {isSpeaking
+                      ? "Speaking..."
+                      : "Test Voice"}
+                  </button>
                 </div>
               </SettingsCard>
             </>
           )}
+
+          {/* =========================
+              SYSTEM
+              ========================= */}
 
           {activeSection === "System" && (
             <>
@@ -720,7 +1445,9 @@ function Settings() {
                   description="Start Jarvis automatically when this device starts."
                   checked={launchOnStartup}
                   onChange={() =>
-                    setLaunchOnStartup(!launchOnStartup)
+                    setLaunchOnStartup(
+                      !launchOnStartup
+                    )
                   }
                 />
 
@@ -729,7 +1456,9 @@ function Settings() {
                   description="Keep Jarvis available when the main window is closed."
                   checked={runInBackground}
                   onChange={() =>
-                    setRunInBackground(!runInBackground)
+                    setRunInBackground(
+                      !runInBackground
+                    )
                   }
                 />
 
@@ -738,7 +1467,47 @@ function Settings() {
                   description="Allow Jarvis to send system notifications."
                   checked={notifications}
                   onChange={() =>
-                    setNotifications(!notifications)
+                    setNotifications(
+                      !notifications
+                    )
+                  }
+                />
+              </SettingsCard>
+
+              <SettingsCard
+                title="AI Status"
+                subtitle="Current Jarvis intelligence configuration."
+              >
+                <InfoField
+                  label="Selected Model"
+                  value={activeModel}
+                />
+
+                <InfoField
+                  label="Inference Mode"
+                  value={inferenceMode}
+                />
+
+                <InfoField
+                  label="Local LLM"
+                  value="Online"
+                />
+
+                <InfoField
+                  label="Cloud API"
+                  value={
+                    apiConnected
+                      ? "Connected"
+                      : "Not Connected"
+                  }
+                />
+
+                <InfoField
+                  label="Text-to-Speech"
+                  value={
+                    ttsEnabled
+                      ? "Enabled"
+                      : "Disabled"
                   }
                 />
               </SettingsCard>
@@ -766,6 +1535,10 @@ function Settings() {
           )}
         </div>
 
+        {/* =========================
+            SAVE
+            ========================= */}
+
         <div className="save-area">
           <span>
             Changes apply to your Jarvis profile.
@@ -783,7 +1556,15 @@ function Settings() {
   );
 }
 
-function SettingsCard({ title, subtitle, children }) {
+// ==============================
+// REUSABLE COMPONENTS
+// ==============================
+
+function SettingsCard({
+  title,
+  subtitle,
+  children,
+}) {
   return (
     <section className="settings-card">
       <div className="card-heading">
@@ -822,7 +1603,10 @@ function SettingToggle({
   );
 }
 
-function InfoField({ label, value }) {
+function InfoField({
+  label,
+  value,
+}) {
   return (
     <div className="info-field">
       <span>{label}</span>
@@ -831,15 +1615,28 @@ function InfoField({ label, value }) {
   );
 }
 
-function StatusLine({ label, value }) {
+function StatusLine({
+  label,
+  value,
+  active = true,
+}) {
   return (
     <div className="status-line">
       <div>
-        <span className="status-dot"></span>
+        <span
+          className={`status-dot ${
+            !active
+              ? "status-dot-offline"
+              : ""
+          }`}
+        ></span>
+
         {label}
       </div>
 
-      <strong>{value}</strong>
+      <strong>
+        {value}
+      </strong>
     </div>
   );
 }
