@@ -10,7 +10,7 @@ const controls = [
   },
   {
     key: 'voiceOutput', label: 'Voice Output', icon: Volume2,
-    description: 'Prefer spoken replies when voice output is available. Speech playback is not connected yet.',
+    description: 'Speak new Jarvis chat replies aloud using this browser’s speech synthesis.',
   },
   {
     key: 'cloudConnection', label: 'Cloud Connection', icon: Cloud,
@@ -56,7 +56,7 @@ function Settings() {
 
       <p className="settings-notice" id="settings-local-note">
         Local preferences only. These choices are saved in this browser for future integrations;
-        they do not change the running assistant yet.
+        Voice Output controls spoken replies in Chat. Other preferences are saved for future integrations.
       </p>
 
       <div className="settings-list">

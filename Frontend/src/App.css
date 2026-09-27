@@ -346,6 +346,38 @@
   font-size: 18px;
 }
 
+.chat-audio-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.chat-audio-controls button {
+  min-height: 40px;
+  padding: 8px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #c8dcf1;
+  background: rgba(16, 32, 47, 0.9);
+  border: 1px solid rgba(120, 180, 255, 0.2);
+  border-radius: 7px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+
+.chat-audio-controls button[aria-checked='true'] {
+  color: #63f2b0;
+  border-color: rgba(44, 206, 133, 0.3);
+}
+
+.chat-audio-controls button:disabled { opacity: 0.55; cursor: default; }
+.chat-audio-controls button:focus-visible { outline: 2px solid #62c9ff; outline-offset: 3px; }
+.chat-audio-controls span { color: #91a8bf; font-size: 11px; }
+
 
 /* =========================
    RIGHT PANEL

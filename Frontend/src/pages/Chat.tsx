@@ -1,11 +1,16 @@
 import { useState } from 'react'
 import { sendMessageToJarvis } from '../services/jarvis'
+import { settingsStore } from '../services/settings'
+import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis'
 
 import {
   Terminal,
   Folder,
   Search,
   Sparkles,
+  Volume2,
+  VolumeX,
+  Square,
 } from 'lucide-react'
 
 type ChatMessage = {
@@ -17,6 +22,25 @@ type ChatMessage = {
 function Chat() {
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [initialSettings] = useState(() => settingsStore.load())
+  const [voiceOutput, setVoiceOutput] = useState(initialSettings.preferences.voiceOutput)
+  const [audioFeedback, setAudioFeedback] = useState('')
+  const speech = useSpeechSynthesis()
+
+  const toggleVoiceOutput = () => {
+    if (!speech.available) {
+      setAudioFeedback('Spoken replies are unavailable in this browser.')
+      return
+    }
+    const next = !voiceOutput
+    setVoiceOutput(next)
+    const saved = settingsStore.save({ ...settingsStore.load().preferences, voiceOutput: next })
+    setAudioFeedback(saved
+      ? next ? 'Spoken Jarvis replies enabled.' : 'Spoken Jarvis replies disabled.'
+      : 'Preference changed for this visit, but could not be saved in browser storage.')
+    if (!next) speech.stop()
+  }
+
   const handleSend = async () => {
     if (!message.trim()) return
 
@@ -25,10 +49,7 @@ function Chat() {
       content: message,
     }
 
-    setMessages([
-      ...messages,
-      userMessage,
-    ])
+    setMessages((currentMessages) => [...currentMessages, userMessage])
 
     setMessage('')
 
@@ -40,11 +61,21 @@ function Chat() {
         content: result.response,
       }
 
+      if (voiceOutput) {
+        if (!speech.available) {
+          setAudioFeedback('Jarvis replied, but speech synthesis is unavailable in this browser.')
+        } else if (!speech.speak(result.response)) {
+          setAudioFeedback('Jarvis replied, but the browser could not start speech.')
+        } else {
+          setAudioFeedback('Speaking Jarvis reply. Starting another reply will stop this one.')
+        }
+      }
+
       setMessages((currentMessages) => [
         ...currentMessages,
         jarvisMessage,
       ])
-    } catch (error) {
+    } catch {
       const errorMessage: ChatMessage = {
         role: 'assistant',
         content: 'Unable to connect to Jarvis.',
@@ -121,6 +152,29 @@ function Chat() {
 
       {/* CHAT */}
       <section className="chat-area">
+
+        <div className="chat-audio-controls" aria-label="Spoken replies">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={voiceOutput}
+            aria-label="Speak Jarvis replies"
+            aria-describedby="chat-audio-status"
+            disabled={!speech.available}
+            onClick={toggleVoiceOutput}
+          >
+            {voiceOutput ? <Volume2 size={17} aria-hidden="true" /> : <VolumeX size={17} aria-hidden="true" />}
+            {voiceOutput ? 'Spoken replies on' : 'Spoken replies off'}
+          </button>
+          <button type="button" onClick={() => { speech.stop(); setAudioFeedback('Speech stopped.') }} disabled={!speech.available || !speech.speaking}>
+            <Square size={14} aria-hidden="true" />Stop speech
+          </button>
+          <span id="chat-audio-status" role="status" aria-live="polite">
+            {!speech.available ? 'Speech synthesis is unavailable in this browser.'
+              : speech.error ? 'The browser could not speak that reply.'
+                : audioFeedback || (voiceOutput ? 'New Jarvis replies will be spoken.' : 'Jarvis replies are silent.')}
+          </span>
+        </div>
 
         <div className="message user-message">
           Open calculator
