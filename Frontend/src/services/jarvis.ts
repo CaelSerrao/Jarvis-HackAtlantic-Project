@@ -1,3 +1,5 @@
+import { apiFetch } from './api'
+
 export type JarvisResponse = {
     response: string
 }
@@ -5,7 +7,7 @@ export type JarvisResponse = {
 export async function sendMessageToJarvis(
     message: string,
 ): Promise<JarvisResponse> {
-    const response = await fetch('http://localhost:8000/chat', {
+    const response = await apiFetch('/chat', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

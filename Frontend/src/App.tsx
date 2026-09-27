@@ -7,7 +7,8 @@ import {
   Settings,
 } from 'lucide-react'
 
-import { NavLink, Route, Routes } from 'react-router-dom'
+import { Navigate, NavLink, Route, Routes } from 'react-router-dom'
+import AccountMenu from './auth/AccountMenu'
 
 import Chat from './pages/Chat'
 import Tools from './pages/ToolsPage'
@@ -133,10 +134,7 @@ function App() {
           </p>
         </div>
 
-        <div className="profile">
-          <div className="avatar">R</div>
-          <span>Ryan</span>
-        </div>
+        <AccountMenu />
       </aside>
 
 
@@ -149,6 +147,7 @@ function App() {
           <Route path="/files" element={<Files />} />
           <Route path="/memory" element={<Memory />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="*" element={<Navigate to="/chat" replace />} />
         </Routes>
 
       </main>

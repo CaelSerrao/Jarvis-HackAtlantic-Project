@@ -1,0 +1,65 @@
+.automation-page {
+  min-height: 0;
+  overflow-y: auto;
+  container-type: inline-size;
+}
+
+.automation-page .automation-notice,
+.automation-page .automation-editor,
+.automation-page .automation-empty {
+  padding: 18px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(104, 177, 255, 0.2);
+  border-radius: 10px;
+  background: linear-gradient(145deg, rgba(18, 35, 52, 0.78), rgba(8, 18, 29, 0.9));
+}
+
+.automation-page p {
+  color: #a5b8cd;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.automation-page h2 { margin: 0 0 12px; font-size: 16px; color: #edf6ff; }
+.automation-page .automation-notice { color: #a8c7df; }
+.automation-page .automation-feedback { min-height: 20px; color: #8fd9ff; }
+.automation-page .automation-error { color: #ffc857; }
+.automation-page .automation-form-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.automation-page label { display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: #c5d7e9; }
+.automation-page .automation-full-field { grid-column: 1 / -1; }
+.automation-page input,
+.automation-page select,
+.automation-page button {
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 12px;
+  color: #dceaff;
+  background: #10202f;
+  border: 1px solid rgba(120, 180, 255, 0.25);
+  border-radius: 7px;
+}
+
+.automation-page input[type='time'] { color-scheme: dark; }
+.automation-page button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+.automation-page button:disabled,
+.automation-page button[aria-disabled='true'] { opacity: 0.5; cursor: default; }
+.automation-page button:not(:disabled):not([aria-disabled='true']):hover { border-color: #62c9ff; }
+.automation-page :is(button, input, select):focus-visible { outline: 2px solid #62c9ff; outline-offset: 3px; }
+.automation-page .automation-actions { display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.automation-page .automation-primary { color: #8fd9ff; background: rgba(36, 143, 220, 0.16); }
+.automation-page .automation-delete { color: #ffb5b5; }
+.automation-page .automation-card { grid-template-columns: 26px minmax(0, 1fr); align-items: start; }
+.automation-page .automation-card:hover { transform: none; }
+.automation-page .automation-card h2 { font-size: 14px; overflow-wrap: anywhere; margin: 0; }
+.automation-page .automation-card span { color: #a5b8cd; line-height: 1.6; overflow-wrap: anywhere; }
+.automation-page .automation-card small { align-self: start; color: #ffc857; }
+.automation-page .automation-card .automation-actions { grid-column: 2; }
+.automation-page button[aria-checked='true'] { color: #63f2b0; border-color: rgba(44, 206, 133, 0.4); }
+
+@container (max-width: 480px) {
+  .automation-page .automation-form-fields { grid-template-columns: minmax(0, 1fr); }
+  .automation-page .automation-card { padding: 14px; }
+  .automation-page .automation-card .automation-actions { grid-column: 1 / -1; }
+}
