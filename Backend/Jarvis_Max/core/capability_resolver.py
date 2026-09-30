@@ -1,13 +1,13 @@
 import json
 
+from .decision_gate import DecisionGate, parse_decision
+
 
 RESOLUTION_SCHEMA = {
     "type": "object",
-
     "properties": {
         "resolution": {
             "type": "string",
-
             "enum": [
                 "chat",
                 "web_lookup",
@@ -15,92 +15,68 @@ RESOLUTION_SCHEMA = {
                 "direct_tool",
                 "host_primitive",
                 "composite_plan",
-                "capability_gap"
-            ]
+                "capability_gap",
+            ],
         },
-
         "tool_name": {
-            "type": [
-                "string",
-                "null"
-            ]
+            "type": ["string", "null"],
         },
-
         "primitive_name": {
-            "type": [
-                "string",
-                "null"
-            ]
+            "type": ["string", "null"],
         },
-
         "arguments": {
-            "type": "object"
+            "type": "object",
         },
-
         "steps": {
             "type": "array",
-
             "items": {
                 "type": "object",
-
                 "properties": {
                     "executor": {
                         "type": "string",
-
                         "enum": [
                             "tool",
-                            "primitive"
-                        ]
+                            "primitive",
+                        ],
                     },
-
                     "name": {
-                        "type": "string"
+                        "type": "string",
                     },
-
                     "arguments": {
-                        "type": "object"
-                    }
+                        "type": "object",
+                    },
                 },
-
                 "required": [
                     "executor",
                     "name",
-                    "arguments"
+                    "arguments",
                 ],
-
-                "additionalProperties": False
-            }
+                "additionalProperties": False,
+            },
         },
-
         "missing_capability": {
             "type": [
                 "object",
-                "null"
+                "null",
             ],
-
             "properties": {
                 "name": {
-                    "type": "string"
+                    "type": "string",
                 },
-
                 "reason": {
-                    "type": "string"
-                }
+                    "type": "string",
+                },
             },
-
             "required": [
                 "name",
-                "reason"
+                "reason",
             ],
-
-            "additionalProperties": False
+            "additionalProperties": False,
         },
-
         "reason": {
-            "type": "string"
-        }
+            "type": "string",
+        },
     },
-
     "required": [
         "resolution",
         "tool_name",
@@ -108,10 +84,9 @@ RESOLUTION_SCHEMA = {
         "arguments",
         "steps",
         "missing_capability",
-        "reason"
+        "reason",
     ],
-
-    "additionalProperties": False
+    "additionalProperties": False,
 }
 
 
@@ -121,55 +96,34 @@ class CapabilityResolver:
         self,
         llm,
         tool_registry,
-        host_registry
+        host_registry,
     ):
         self.llm = llm
         self.tool_registry = tool_registry
         self.host_registry = host_registry
 
+        self.decision_gate = DecisionGate()
 
-    def get_tool_catalog(
-        self
-    ):
+    def get_tool_catalog(self):
         catalog = []
 
-        for schema in (
-            self.tool_registry.get_schemas()
-        ):
-            function = schema[
-                "function"
-            ]
+        for schema in self.tool_registry.get_schemas():
+            function = schema["function"]
 
             catalog.append({
-                "name":
-                    function["name"],
-
-                "description":
-                    function[
-                        "description"
-                    ],
-
-                "parameters":
-                    function[
-                        "parameters"
-                    ]
+                "name": function["name"],
+                "description": function["description"],
+                "parameters": function["parameters"],
             })
 
         return catalog
 
-
-    def get_host_catalog(
-        self
-    ):
-        return (
-            self.host_registry
-            .get_schemas()
-        )
-
+    def get_host_catalog(self):
+        return self.host_registry.get_schemas()
 
     def should_allow_deep_research(
         self,
-        user_request
+        user_request,
     ):
         """
         Prevent the local router from selecting
@@ -193,7 +147,7 @@ class CapabilityResolver:
             "detailed report",
             "research report",
             "analyze multiple sources",
-            "analyse multiple sources"
+            "analyse multiple sources",
         ]
 
         return any(
@@ -201,18 +155,12 @@ class CapabilityResolver:
             for signal in strong_signals
         )
 
-
     def build_messages(
         self,
-        user_request
+        user_request,
     ):
-        tools = (
-            self.get_tool_catalog()
-        )
-
-        primitives = (
-            self.get_host_catalog()
-        )
+        tools = self.get_tool_catalog()
+        primitives = self.get_host_catalog()
 
         system_prompt = """
 You are Jarvis's Capability Resolver.
@@ -453,6 +401,7 @@ exists:
 → capability_gap
 
 missing_capability.name:
+
 "Create ZIP archives"
 
 Do NOT rename the folder so that its name ends in .zip.
@@ -637,54 +586,36 @@ AVAILABLE HOST PRIMITIVES:
         return [
             {
                 "role": "system",
-                "content": system_prompt
+                "content": system_prompt,
             },
-
             {
                 "role": "user",
-                "content": user_prompt
-            }
+                "content": user_prompt,
+            },
         ]
-
 
     def capability_gap_result(
         self,
         name,
-        reason
+        reason,
     ):
         return {
-            "resolution":
-                "capability_gap",
-
-            "tool_name":
-                None,
-
-            "primitive_name":
-                None,
-
-            "arguments":
-                {},
-
-            "steps":
-                [],
-
+            "resolution": "capability_gap",
+            "tool_name": None,
+            "primitive_name": None,
+            "arguments": {},
+            "steps": [],
             "missing_capability": {
-                "name":
-                    name,
-
-                "reason":
-                    reason
+                "name": name,
+                "reason": reason,
             },
-
-            "reason":
-                reason
+            "reason": reason,
         }
-
 
     def plan_conflicts_with_request(
         self,
         user_request,
-        steps
+        steps,
     ):
         """
         Detect plans that are syntactically valid but
@@ -701,7 +632,6 @@ AVAILABLE HOST PRIMITIVES:
             or ""
         ).lower()
 
-
         archive_signals = [
             "zip archive",
             ".zip",
@@ -713,59 +643,46 @@ AVAILABLE HOST PRIMITIVES:
             "compressed",
             "create an archive",
             "archive this",
-            "archive the"
+            "archive the",
         ]
-
 
         wants_archive = any(
             signal in text
             for signal in archive_signals
         )
 
-
         if not wants_archive:
             return None
-
 
         archive_capability_terms = [
             "zip",
             "archive",
-            "compress"
+            "compress",
         ]
 
-
-        for step in (
-            steps
-            or []
-        ):
+        for step in steps or []:
 
             if not isinstance(
                 step,
-                dict
+                dict,
             ):
                 continue
-
 
             name = str(
                 step.get(
                     "name",
-                    ""
+                    "",
                 )
             ).lower()
 
-
             if any(
                 term in name
-                for term
-                in archive_capability_terms
+                for term in archive_capability_terms
             ):
                 return None
 
-
         return {
-            "name":
-                "Create ZIP archives",
-
+            "name": "Create ZIP archives",
             "reason": (
                 "The user requested archive or "
                 "compression functionality, but the "
@@ -774,15 +691,14 @@ AVAILABLE HOST PRIMITIVES:
                 "an archive. Renaming or moving a "
                 "directory to a .zip path does not "
                 "create a ZIP archive."
-            )
+            ),
         }
-
 
     def normalize_composite_step(
         self,
         step,
         tool_names,
-        primitive_names
+        primitive_names,
     ):
         """
         Repair alternate composite-plan formats produced
@@ -798,18 +714,14 @@ AVAILABLE HOST PRIMITIVES:
 
         if not isinstance(
             step,
-            dict
+            dict,
         ):
             return None
-
 
         name = step.get(
             "name"
         )
 
-
-        # Qwen sometimes outputs tool_name /
-        # primitive_name instead of name.
         if not name:
 
             tool_name = step.get(
@@ -820,15 +732,11 @@ AVAILABLE HOST PRIMITIVES:
                 "primitive_name"
             )
 
-
             if tool_name:
-
                 name = tool_name
 
             elif primitive_name:
-
                 name = primitive_name
-
 
         arguments = (
             step.get(
@@ -840,90 +748,65 @@ AVAILABLE HOST PRIMITIVES:
             or {}
         )
 
-
         executor = step.get(
             "executor"
         )
 
-
-        # Infer executor from the actual catalog.
         if name in tool_names:
-
             executor = "tool"
 
         elif name in primitive_names:
-
             executor = "primitive"
-
 
         if (
             not name
             or executor not in {
                 "tool",
-                "primitive"
+                "primitive",
             }
         ):
             return None
 
-
         return {
-            "executor":
-                executor,
-
-            "name":
-                name,
-
-            "arguments":
-                arguments
+            "executor": executor,
+            "name": name,
+            "arguments": arguments,
         }
-
 
     def validate_resolution(
         self,
         result,
-        user_request=None
+        user_request=None,
     ):
         if not isinstance(
             result,
-            dict
+            dict,
         ):
-            return (
-                self.capability_gap_result(
-                    "Resolve requested action",
-                    (
-                        "Capability resolver "
-                        "returned an invalid result."
-                    )
-                )
+            return self.capability_gap_result(
+                "Resolve requested action",
+                (
+                    "Capability resolver "
+                    "returned an invalid result."
+                ),
             )
-
 
         resolution = str(
             result.get(
                 "resolution",
-                ""
+                "",
             )
         ).lower()
 
-
-        result[
-            "resolution"
-        ] = resolution
-
+        result["resolution"] = resolution
 
         tool_names = {
             item["name"]
-            for item in (
-                self.get_tool_catalog()
-            )
+            for item in self.get_tool_catalog()
         }
 
-
         primitive_names = set(
-            self.host_registry
-            .get_names()
+            self.host_registry.get_names()
         )
-
 
         # ========================================
         # CHAT
@@ -931,28 +814,13 @@ AVAILABLE HOST PRIMITIVES:
 
         if resolution == "chat":
 
-            result[
-                "tool_name"
-            ] = None
-
-            result[
-                "primitive_name"
-            ] = None
-
-            result[
-                "arguments"
-            ] = {}
-
-            result[
-                "steps"
-            ] = []
-
-            result[
-                "missing_capability"
-            ] = None
+            result["tool_name"] = None
+            result["primitive_name"] = None
+            result["arguments"] = {}
+            result["steps"] = []
+            result["missing_capability"] = None
 
             return result
-
 
         # ========================================
         # WEB LOOKUP
@@ -974,52 +842,27 @@ AVAILABLE HOST PRIMITIVES:
                 or user_request
             )
 
-
             if not query:
-
-                return (
-                    self.capability_gap_result(
-                        "Resolve lookup request",
-                        (
-                            "The lookup route did not "
-                            "contain a lookup query."
-                        )
-                    )
+                return self.capability_gap_result(
+                    "Resolve lookup request",
+                    (
+                        "The lookup route did not "
+                        "contain a lookup query."
+                    ),
                 )
 
-
-            result[
-                "arguments"
-            ] = {
-                "query":
-                    query,
-
-                "effort":
-                    "low",
-
-                "mode":
-                    "lookup"
+            result["arguments"] = {
+                "query": query,
+                "effort": "low",
+                "mode": "lookup",
             }
 
-
-            result[
-                "tool_name"
-            ] = None
-
-            result[
-                "primitive_name"
-            ] = None
-
-            result[
-                "steps"
-            ] = []
-
-            result[
-                "missing_capability"
-            ] = None
+            result["tool_name"] = None
+            result["primitive_name"] = None
+            result["steps"] = []
+            result["missing_capability"] = None
 
             return result
-
 
         # ========================================
         # WEB RESEARCH
@@ -1041,99 +884,53 @@ AVAILABLE HOST PRIMITIVES:
                 or user_request
             )
 
-
             if not query:
-
-                return (
-                    self.capability_gap_result(
-                        "Resolve research request",
-                        (
-                            "The research route did not "
-                            "contain a research query."
-                        )
-                    )
+                return self.capability_gap_result(
+                    "Resolve research request",
+                    (
+                        "The research route did not "
+                        "contain a research query."
+                    ),
                 )
 
-
-            # Qwen may select expensive research too
-            # eagerly. Downgrade unless the user gave
-            # a strong research signal.
             if (
                 user_request
                 and not self.should_allow_deep_research(
                     user_request
                 )
             ):
-
                 return {
-                    "resolution":
-                        "web_lookup",
-
-                    "tool_name":
-                        None,
-
-                    "primitive_name":
-                        None,
-
+                    "resolution": "web_lookup",
+                    "tool_name": None,
+                    "primitive_name": None,
                     "arguments": {
-                        "query":
-                            query,
-
-                        "effort":
-                            "low",
-
-                        "mode":
-                            "lookup"
+                        "query": query,
+                        "effort": "low",
+                        "mode": "lookup",
                     },
-
-                    "steps":
-                        [],
-
-                    "missing_capability":
-                        None,
-
+                    "steps": [],
+                    "missing_capability": None,
                     "reason": (
                         "The request needs current web "
                         "information, but substantial "
                         "multi-step research was not "
                         "explicitly requested. "
                         "Using web lookup instead."
-                    )
+                    ),
                 }
 
-
-            result[
-                "arguments"
-            ] = {
-                "query":
-                    query,
-
-                "effort":
-                    "high",
-
-                "mode":
-                    "research"
+            result["arguments"] = {
+                "query": query,
+                "effort": "high",
+                "mode": "research",
             }
 
-
-            result[
-                "tool_name"
-            ] = None
-
-            result[
-                "primitive_name"
-            ] = None
-
-            result[
-                "steps"
-            ] = []
-
-            result[
-                "missing_capability"
-            ] = None
+            result["tool_name"] = None
+            result["primitive_name"] = None
+            result["steps"] = []
+            result["missing_capability"] = None
 
             return result
-
 
         # ========================================
         # DIRECT TOOL
@@ -1145,60 +942,31 @@ AVAILABLE HOST PRIMITIVES:
                 "tool_name"
             )
 
-
             if name in tool_names:
 
-                result[
-                    "primitive_name"
-                ] = None
-
-                result[
-                    "steps"
-                ] = []
-
-                result[
-                    "missing_capability"
-                ] = None
+                result["primitive_name"] = None
+                result["steps"] = []
+                result["missing_capability"] = None
 
                 return result
 
-
-            # Repair tool/primitive classification.
             if name in primitive_names:
 
-                result[
-                    "resolution"
-                ] = "host_primitive"
-
-                result[
-                    "primitive_name"
-                ] = name
-
-                result[
-                    "tool_name"
-                ] = None
-
-                result[
-                    "steps"
-                ] = []
-
-                result[
-                    "missing_capability"
-                ] = None
+                result["resolution"] = "host_primitive"
+                result["primitive_name"] = name
+                result["tool_name"] = None
+                result["steps"] = []
+                result["missing_capability"] = None
 
                 return result
 
-
-            return (
-                self.capability_gap_result(
-                    "Resolve requested action",
-                    (
-                        "Resolver selected an "
-                        f"unknown capability: {name}"
-                    )
-                )
+            return self.capability_gap_result(
+                "Resolve requested action",
+                (
+                    "Resolver selected an "
+                    f"unknown capability: {name}"
+                ),
             )
-
 
         # ========================================
         # HOST PRIMITIVE
@@ -1210,60 +978,31 @@ AVAILABLE HOST PRIMITIVES:
                 "primitive_name"
             )
 
-
             if name in primitive_names:
 
-                result[
-                    "tool_name"
-                ] = None
-
-                result[
-                    "steps"
-                ] = []
-
-                result[
-                    "missing_capability"
-                ] = None
+                result["tool_name"] = None
+                result["steps"] = []
+                result["missing_capability"] = None
 
                 return result
 
-
-            # Repair primitive/tool classification.
             if name in tool_names:
 
-                result[
-                    "resolution"
-                ] = "direct_tool"
-
-                result[
-                    "tool_name"
-                ] = name
-
-                result[
-                    "primitive_name"
-                ] = None
-
-                result[
-                    "steps"
-                ] = []
-
-                result[
-                    "missing_capability"
-                ] = None
+                result["resolution"] = "direct_tool"
+                result["tool_name"] = name
+                result["primitive_name"] = None
+                result["steps"] = []
+                result["missing_capability"] = None
 
                 return result
 
-
-            return (
-                self.capability_gap_result(
-                    "Resolve requested action",
-                    (
-                        "Resolver selected an "
-                        f"unknown capability: {name}"
-                    )
-                )
+            return self.capability_gap_result(
+                "Resolve requested action",
+                (
+                    "Resolver selected an "
+                    f"unknown capability: {name}"
+                ),
             )
-
 
         # ========================================
         # COMPOSITE PLAN
@@ -1278,138 +1017,78 @@ AVAILABLE HOST PRIMITIVES:
                 or []
             )
 
-
             if len(
                 raw_steps
             ) < 2:
 
-                return (
-                    self.capability_gap_result(
-                        "Resolve requested action",
-                        (
-                            "Resolver produced an "
-                            "incomplete composite plan."
-                        )
-                    )
+                return self.capability_gap_result(
+                    "Resolve requested action",
+                    (
+                        "Resolver produced an "
+                        "incomplete composite plan."
+                    ),
                 )
-
 
             normalized_steps = []
 
-
             for raw_step in raw_steps:
 
-                step = (
-                    self.normalize_composite_step(
-                        raw_step,
-                        tool_names,
-                        primitive_names
-                    )
+                step = self.normalize_composite_step(
+                    raw_step,
+                    tool_names,
+                    primitive_names,
                 )
-
 
                 if step is None:
 
-                    return (
-                        self._invalid_plan(
-                            str(
-                                raw_step
-                            )
+                    return self._invalid_plan(
+                        str(
+                            raw_step
                         )
                     )
 
-
-                name = step[
-                    "name"
-                ]
-
-                executor = step[
-                    "executor"
-                ]
-
+                name = step["name"]
+                executor = step["executor"]
 
                 if (
                     executor == "tool"
                     and name not in tool_names
                 ):
-
-                    return (
-                        self._invalid_plan(
-                            name
-                        )
+                    return self._invalid_plan(
+                        name
                     )
-
 
                 if (
                     executor == "primitive"
                     and name not in primitive_names
                 ):
-
-                    return (
-                        self._invalid_plan(
-                            name
-                        )
+                    return self._invalid_plan(
+                        name
                     )
-
 
                 normalized_steps.append(
                     step
                 )
 
-
-            # ------------------------------------
-            # SEMANTIC PLAN VALIDATION
-            #
-            # A plan can reference real tools while
-            # still being incapable of performing the
-            # requested operation.
-            # ------------------------------------
-
-            conflict = (
-                self.plan_conflicts_with_request(
-                    user_request,
-                    normalized_steps
-                )
+            conflict = self.plan_conflicts_with_request(
+                user_request,
+                normalized_steps,
             )
-
 
             if conflict:
 
-                return (
-                    self.capability_gap_result(
-                        conflict[
-                            "name"
-                        ],
-
-                        conflict[
-                            "reason"
-                        ]
-                    )
+                return self.capability_gap_result(
+                    conflict["name"],
+                    conflict["reason"],
                 )
 
-
-            result[
-                "steps"
-            ] = normalized_steps
-
-            result[
-                "tool_name"
-            ] = None
-
-            result[
-                "primitive_name"
-            ] = None
-
-            result[
-                "arguments"
-            ] = {}
-
-            result[
-                "missing_capability"
-            ] = None
+            result["steps"] = normalized_steps
+            result["tool_name"] = None
+            result["primitive_name"] = None
+            result["arguments"] = {}
+            result["missing_capability"] = None
 
             return result
-
 
         # ========================================
         # CAPABILITY GAP
@@ -1421,26 +1100,20 @@ AVAILABLE HOST PRIMITIVES:
                 "missing_capability"
             )
 
-
             if not isinstance(
                 missing,
-                dict
+                dict,
             ):
-
-                return (
-                    self.capability_gap_result(
-                        "Unknown missing capability",
-
-                        result.get(
-                            "reason",
-                            (
-                                "Jarvis cannot currently "
-                                "perform this request."
-                            )
-                        )
-                    )
+                return self.capability_gap_result(
+                    "Unknown missing capability",
+                    result.get(
+                        "reason",
+                        (
+                            "Jarvis cannot currently "
+                            "perform this request."
+                        ),
+                    ),
                 )
-
 
             name = missing.get(
                 "name"
@@ -1450,86 +1123,67 @@ AVAILABLE HOST PRIMITIVES:
                 "reason"
             )
 
-
             if not name:
-
                 name = (
                     "Unknown missing capability"
                 )
 
-
             if not reason:
-
                 reason = result.get(
                     "reason",
                     (
                         "Jarvis lacks a capability "
                         "required for this request."
-                    )
+                    ),
                 )
 
-
-            return (
-                self.capability_gap_result(
-                    name,
-                    reason
-                )
+            return self.capability_gap_result(
+                name,
+                reason,
             )
-
 
         # ========================================
         # UNKNOWN RESOLUTION
         # ========================================
 
-        return (
-            self.capability_gap_result(
-                "Resolve requested action",
-                (
-                    f"Unknown resolver result: "
-                    f"{resolution}"
-                )
-            )
+        return self.capability_gap_result(
+            "Resolve requested action",
+            (
+                f"Unknown resolver result: "
+                f"{resolution}"
+            ),
         )
-
 
     def _invalid_plan(
         self,
-        invalid_name
+        invalid_name,
     ):
-        return (
-            self.capability_gap_result(
-                "Resolve requested action",
-                (
-                    "The resolver produced an "
-                    "invalid execution plan. "
-                    f"Unknown capability: "
-                    f"{invalid_name}"
-                )
-            )
+        return self.capability_gap_result(
+            "Resolve requested action",
+            (
+                "The resolver produced an "
+                "invalid execution plan. "
+                f"Unknown capability: "
+                f"{invalid_name}"
+            ),
         )
-
 
     def resolve(
         self,
-        user_request
+        user_request,
     ):
-        messages = (
-            self.build_messages(
-                user_request
-            )
+        messages = self.build_messages(
+            user_request
         )
 
-
-        result = (
-            self.llm.structured_chat(
-                messages=messages,
-                schema=RESOLUTION_SCHEMA,
-                max_tokens=512
-            )
+        result = self.llm.structured_chat(
+            messages=messages,
+            schema=RESOLUTION_SCHEMA,
+            max_tokens=512,
         )
-
 
         # Useful during development.
+
         print()
         print(
             "[Resolver Raw Result]"
@@ -1538,18 +1192,14 @@ AVAILABLE HOST PRIMITIVES:
         print(
             json.dumps(
                 result,
-                indent=2
+                indent=2,
             )
         )
 
-
-        validated = (
-            self.validate_resolution(
-                result,
-                user_request=user_request
-            )
+        validated = self.validate_resolution(
+            result,
+            user_request=user_request,
         )
-
 
         print()
         print(
@@ -1559,9 +1209,59 @@ AVAILABLE HOST PRIMITIVES:
         print(
             json.dumps(
                 validated,
-                indent=2
+                indent=2,
             )
         )
 
+        # ========================================
+        # JEV DECISION GATE - OBSERVATION MODE
+        # ========================================
+
+        if self.decision_gate.available():
+
+            try:
+                available_capabilities = [
+                    f"tool:{tool['name']}"
+                    for tool in self.get_tool_catalog()
+                ]
+
+                available_capabilities.extend(
+                    f"primitive:{name}"
+                    for name
+                    in self.host_registry.get_names()
+                )
+
+                jev_raw = self.decision_gate.evaluate(
+                    user_request=user_request,
+                    resolver_result=json.dumps(
+                        validated
+                    ),
+                    available_capabilities=(
+                        available_capabilities
+                    ),
+                )
+
+                jev_decision = parse_decision(
+                    jev_raw
+                )
+
+                print()
+                print(
+                    "[Jev Decision]"
+                )
+
+                print(
+                    json.dumps(
+                        jev_decision,
+                        indent=2,
+                    )
+                )
+
+            except Exception as exc:
+
+                print()
+                print(
+                    f"[Jev Decision Gate Error] {exc}"
+                )
 
         return validated
